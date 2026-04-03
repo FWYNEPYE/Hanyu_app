@@ -1,0 +1,38 @@
+# --- FRONTEND (React / Vite) ---
+# Chặn thư mục thư viện nặng nhất
+node_modules/
+# Chặn thư mục chứa code đã build (thành phẩm)
+dist/
+dist-ssr/
+# Chặn các file biến môi trường chứa mật khẩu/API Key
+*.local
+.env
+.env.local
+
+# --- BACKEND (.NET / C#) ---
+# Chặn các thư mục tự sinh khi chạy/build (Rác Backend)
+bin/
+obj/
+# Chặn thư mục cấu hình riêng của Visual Studio
+.vs/
+# Chặn file cấu hình môi trường của Backend
+appsettings.Development.json
+# Chặn các file lưu mật khẩu người dùng (nếu có)
+UserSecrets/
+
+# --- EDITOR & OS (Hệ điều hành và Công cụ) ---
+# Chặn các file rác của VS Code
+.vscode/*
+!.vscode/extensions.json
+# Chặn file của IntelliJ/WebStorm
+.idea/
+# Chặn file rác của Macbook/Windows
+.DS_Store
+Thumbs.db
+
+# --- LOGS (Nhật ký lỗi) ---
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
