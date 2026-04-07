@@ -60,7 +60,7 @@ namespace Server.Controllers
             _context.Vocabularies.Add(vocabulary);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetVocabularies), new { id = vocabulary.Id }, vocabulary);
+            return CreatedAtAction(nameof(GetVocabularies), new { id = vocabulary.VocaId }, vocabulary);
         }
 
 
@@ -84,7 +84,7 @@ namespace Server.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutVocabulary(int id, Vocabulary vocabulary)
         {
-            if (id != vocabulary.Id)
+            if (id != vocabulary.VocaId)
             {
                 return BadRequest(new { message = "ID không khớp!" });
             }
@@ -110,7 +110,7 @@ namespace Server.Controllers
         }
             private bool VocabularyExists(int id)
             {
-            return _context.Vocabularies.Any(e => e.Id == id);
+            return _context.Vocabularies.Any(e => e.VocaId == id);
          }
     }
 }

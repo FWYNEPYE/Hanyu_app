@@ -32,5 +32,6 @@ namespace Server.Models
        public string? AvatarUrl { get; set; }
         public virtual ICollection<DailyProgress> DailyProgresses { get; set; }
         public virtual ICollection<ChatHistory> ChatHistories { get; set; } = new List<ChatHistory>();
+        public virtual ICollection<Category> Categories { get; set; } = new List<Category>();
     }
 }

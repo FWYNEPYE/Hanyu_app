@@ -13,7 +13,9 @@ const API_BASE_URL = "http://localhost:5252/api";
 
 const Vocabulary = () => {
   const location = useLocation();
-  
+  // Thêm đoạn này vào đầu component Vocabulary
+const userData = JSON.parse(localStorage.getItem('user'));
+const currentUserId = localStorage.getItem("userId"); // Tùy theo cách bạn đặt tên trường lúc lưu login
   // --- DATA STATES ---
   const [collections, setCollections] = useState([]); 
   const [vocabData, setVocabData] = useState([]);     
@@ -34,21 +36,26 @@ const Vocabulary = () => {
 
   // --- FETCH DATA FROM BACKEND ---
   const fetchData = async () => {
-    try {
-      const [cateRes, vocabRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/Category`),
-        axios.get(`${API_BASE_URL}/Vocabulary`)
-      ]);
-      setCollections(cateRes.data);
-      setVocabData(vocabRes.data);
-      if (cateRes.data.length > 0 && !selectedCategoryId) {
-        setSelectedCategoryId(cateRes.data[0].categoryID);
-      }
-    } catch (err) {
-      console.error("Lỗi kết nối Backend:", err);
-    }
-  };
+  try {
+    // Nếu không có ID thì không gọi API để tránh lỗi 400/404
+    if (!currentUserId) return;
 
+    const [cateRes, vocabRes] = await Promise.all([
+      // Gọi đúng đường dẫn lấy theo user ID
+      axios.get(`${API_BASE_URL}/Category/user/${currentUserId}`), 
+      axios.get(`${API_BASE_URL}/Vocabulary`)
+    ]);
+
+    setCollections(cateRes.data);
+    setVocabData(vocabRes.data);
+
+    if (cateRes.data.length > 0 && !selectedCategoryId) {
+      setSelectedCategoryId(cateRes.data[0].categoryID);
+    }
+  } catch (err) {
+    console.error("Lỗi kết nối Backend:", err);
+  }
+};
   useEffect(() => {
     fetchData();
     if (location.state?.openAddTab) setIsAddModalOpen(true);
@@ -57,20 +64,27 @@ const Vocabulary = () => {
 
   // Xử lý tạo Bộ từ mới 
   const handleCreateCategory = async () => {
-    if (!newCategoryName.trim()) return alert("Nhập tên bộ từ!");
-    try {
-      await axios.post(`${API_BASE_URL}/Category`, {
-        categoryName: newCategoryName,
-        categoryType: "user"
-      });
-      alert("Tạo bộ từ thành công!");
-      setNewCategoryName("");
-      setIsCreateSetModalOpen(false);
-      fetchData(); // Load lại danh sách
-    } catch (err) {
-      alert("Lỗi khi tạo bộ từ: " + err.message);
-    }
-  };
+  if (!newCategoryName.trim()) return alert("Nhập tên bộ từ!");
+
+  if (!currentUserId) {
+    return alert("Vui lòng đăng nhập lại!");
+  }
+
+  try {
+    await axios.post(`${API_BASE_URL}/Category`, {
+      categoryName: newCategoryName,
+      categoryType: "user",
+      userID: parseInt(currentUserId) // Gửi ID của người đang login
+    });
+    
+    alert("Tạo bộ từ thành công!");
+    setNewCategoryName("");
+    setIsCreateSetModalOpen(false);
+    fetchData(); 
+  } catch (err) {
+    alert("Lỗi khi tạo bộ từ: " + (err.response?.data?.message || err.message));
+  }
+};
 
   // Xử lý Lưu tất cả các dòng từ vựng mới
   const handleSaveAllRows = async () => {
@@ -105,36 +119,28 @@ const Vocabulary = () => {
   };
 
   // Xử lý Cập nhật một từ 
-  const handleUpdateWord = async () => {
-    // try {
-     
-    //   await axios.put(`${API_BASE_URL}/Vocabulary`, editingWord); 
-    //   alert("Cập nhật thành công!");
-    //   setEditingWord(null);
-    //   fetchData();
-    // } catch (err) {
-    //   alert("Lỗi cập nhật!");
-    // }
-    try {
-    // 1. Kiểm tra xem có ID không
-    if (!editingWord.id) {
-      alert("Lỗi: Không tìm thấy ID của từ cần sửa!");
+const handleUpdateWord = async () => {
+  try {
+    // Backend cần VocaId (viết hoa chữ V theo Model C# của mày)
+    const idToUpdate = editingWord.vocaId || editingWord.VocaId;
+
+    if (!idToUpdate) {
+      alert("Lỗi: Không tìm thấy VocaId!");
       return;
     }
 
-    // 2. Dùng axios.put và truyền ID vào URL
-    // Giả sử ID của từ nằm trong trường 'id' (hoặc 'vocabularyID' tùy DB của mày)
-    await axios.put(`${API_BASE_URL}/Vocabulary/${editingWord.id}`, editingWord); 
+    // Đảm bảo object gửi đi có chứa VocaId đúng tên Backend cần
+    const dataToSend = { ...editingWord, VocaId: idToUpdate };
+
+    await axios.put(`${API_BASE_URL}/Vocabulary/${idToUpdate}`, dataToSend); 
 
     alert("Cập nhật thành công!");
-    setEditingWord(null); // Đóng modal edit
-    fetchData(); // Load lại dữ liệu mới nhất
+    setEditingWord(null); 
+    fetchData(); 
   } catch (err) {
-    console.error("Lỗi cập nhật:", err);
     alert("Lỗi cập nhật: " + (err.response?.data?.message || err.message));
   }
-  };
-
+};
   //  Xóa bộ từ
   const handleDeleteCollection = async (e, id) => {
     e.stopPropagation();
@@ -148,18 +154,18 @@ const Vocabulary = () => {
 
   // Xóa một từ lẻ
 const handleDeleteWord = async (e, wordId) => {
-  //chặn mở lại edit khi bấm xóa
     e.stopPropagation(); 
-
+    // TRUYỀN ĐÚNG wordId (là cái vocaId từ API trả về)
+    if (!wordId) return alert("Không tìm thấy ID của từ!"); 
     if (!window.confirm("Chắc muốn xóa từ này không?")) return;
 
     try {
         await axios.delete(`${API_BASE_URL}/Vocabulary/${wordId}`);
-        
         alert("Xóa từ thành công!");
         
-
-        setVocabData(prev => prev.filter(v => v.id !== wordId)); 
+        // SỬA CHỖ NÀY: Dùng vocaId để filter
+        setVocabData(prev => prev.filter(v => (v.vocaId || v.id) !== wordId)); 
+        fetchData(); 
     } catch (err) {
         console.error("Lỗi xóa từ:", err);
         alert("Không xóa được từ này!");
@@ -260,8 +266,8 @@ const handleDeleteWord = async (e, wordId) => {
                 <tbody>
                   {filteredVocab.map((item) => (
                     <tr 
-                      key={item.id} 
-                      onClick={() => setEditingWord(item)}
+                      key={item.vocaId || item.id}  // Đổi thành vocaId
+    onClick={() => setEditingWord(item)}
                       className="bg-gray-50/50 hover:bg-white hover:shadow-lg transition-all cursor-pointer group"
                     >
                       <td className="px-4 py-5 rounded-l-[20px] text-center">
@@ -282,7 +288,7 @@ const handleDeleteWord = async (e, wordId) => {
                       <td className="px-4 py-5 hidden lg:table-cell text-xs text-gray-500 italic max-w-xs truncate">{item.example}</td>
                       <td className="px-4 py-5 hidden xl:table-cell text-xs text-gray-400">{item.note}</td>
                       <td className="px-4 py-5 rounded-r-[20px] text-center">
-                        <button onClick={(e) => handleDeleteWord(e, item.id)} className="p-3 text-gray-300 hover:text-red-500 transition-all"><HiOutlineTrash size={18}/></button>
+                        <button onClick={(e) => handleDeleteWord(e, item.vocaId || item.id)} className="p-3 text-gray-300 hover:text-red-500 transition-all"><HiOutlineTrash size={18}/></button>
                       </td>
                     </tr>
                   ))}

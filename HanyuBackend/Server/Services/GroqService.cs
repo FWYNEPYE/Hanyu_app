@@ -6,8 +6,9 @@ namespace Server.Services
 {
     public class GroqService
     {
-        private readonly string _apiKey = Environment.GetEnvironmentVariable("GROQ_API_KEY"); 
+        private readonly string _apiKey = "apikeyma"; 
         private readonly HttpClient _httpClient;
+        private readonly string _url = "https://api.groq.com/openai/v1/chat/completions";
 
         public GroqService(HttpClient httpClient)
         {
@@ -26,15 +27,24 @@ namespace Server.Services
             {
                 model = "llama-3.3-70b-versatile",
                 messages = new[] {
-                    new { 
-                        role = "system", 
-                        content = @"Mày là trợ lý học tiếng Trung Lili. 
-                        QUY TẮC BẮT BUỘC:
-                        1. Trường 'text': CHỈ CHỨA CHỮ HÁN (Ví dụ: 你好). KHÔNG ĐƯỢC để phiên âm ở đây.
-                        2. Trường 'pinyin': CHỈ CHỨA PHIÊN ÂM (Ví dụ: Nǐ hǎo).
-                        3. Trường 'translation': CHỈ CHỨA TIẾNG VIỆT (Ví dụ: Chào mày).
-                        Trả về định dạng JSON thuần túy."
-                    },
+                    // Trong GroqService hoặc GeminiService
+                new { 
+                    role = "system", 
+                    content = @"Mày là trợ lý học tiếng Trung Lili. Xưng 'anh', gọi 'em'.
+                            QUY TẮC PHẢN HỒI:
+                            1. Bất kể mày/ (người dùng) nói bằng tiếng gì, mày PHẢI luôn trả lời bằng tiếng Trung (Chữ Hán).
+                            2. TRƯỜNG 'text': Bắt buộc là CHỮ HÁN. Không được để tiếng Việt hay Pinyin vào đây.
+                            3. TRƯỜNG 'pinyin': Là phiên âm của câu Chữ Hán đó.
+                            4. TRƯỜNG 'translation': Là nghĩa tiếng Việt của câu Chữ Hán đó.
+
+                            Ví dụ: Nếu người dùng nói 'Chào mày', mày phải trả về:
+                            {
+                            ""text"": ""你好"",
+                            ""pinyin"": ""Nǐ hǎo"",
+                            ""translation"": ""Chào em""
+                            }
+                    Cấm trả về văn bản thuần, chỉ trả về JSON."
+                },
                     new { role = "user", content = userPrompt }
                 },
                 response_format = new { type = "json_object" }
@@ -55,6 +65,21 @@ namespace Server.Services
             return JsonSerializer.Deserialize<LiliResponse>(content!, 
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         }
+        public async Task<string> GetFullAIResponse(string prompt)
+        {
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+            var payload = new {
+                model = "llama-3.3-70b-versatile",
+                messages = new[] {
+                    new { role = "system", content = "You are a professional Chinese-Vietnamese dictionary assistant. Respond only in JSON." },
+                    new { role = "user", content = prompt }
+                },
+                response_format = new { type = "json_object" }
+            };
+
+            var response = await _httpClient.PostAsJsonAsync(_url, payload);
+            return (await response.Content.ReadAsStringAsync()); // Trả về JSON thô
+        }
     }
 
     public class LiliResponse {
@@ -62,4 +87,6 @@ namespace Server.Services
         public string Pinyin { get; set; } = "";
         public string Translation { get; set; } = "";
     }
+
 }
+  

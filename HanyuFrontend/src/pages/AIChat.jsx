@@ -16,7 +16,7 @@ const AIChat = ({ currentPage }) => {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef(null);
 
-  // ---  LOAD LỊCH SỬ ---
+  // ---  LỊCH SỬ ---
   useEffect(() => {
     const loadInitialHistory = async () => {
         const currentUserId = localStorage.getItem("userId") || 7;
@@ -78,7 +78,6 @@ const AIChat = ({ currentPage }) => {
         const response = await fetch('http://localhost:5252/api/AI/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            // TRUYỀN ID THẬT VÀO ĐÂY
             body: JSON.stringify({ userId: parseInt(currentUserId), message: messageToSend })
         });
 
@@ -98,6 +97,37 @@ const AIChat = ({ currentPage }) => {
         setIsLoading(false);
     }
   };
+  const startListening = () => {
+    // Kiểm tra trình duyệt
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        alert("Trình duyệt của mày không hỗ trợ giọng nói rồi!");
+        return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'vi-VN'; // Hoặc 'zh-CN' nếu mày muốn nói tiếng Trung trực tiếp
+    recognition.continuous = false;
+
+    recognition.onstart = () => {
+        setIsLoading(true); // Mượn cái loading để báo hiệu đang nghe
+    };
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInputText(transcript); // Đổ chữ vừa nói vào ô Input
+    };
+
+    recognition.onerror = (event) => {
+        console.error("Lỗi thu âm:", event.error);
+    };
+
+    recognition.onend = () => {
+        setIsLoading(false);
+    };
+
+    recognition.start();
+};
 
   const startNewChat = () => {
     setMessages([{ id: Date.now(), role: 'ai', text: 'Chào mày! Tao là Lili, muốn học gì nào? ✨', pinyin: 'Nǐ hǎo!', translation: 'Chào bạn!' }]);
@@ -121,13 +151,13 @@ const AIChat = ({ currentPage }) => {
                 <div className="cursor-pointer" onClick={() => setShowMenu(!showMenu)}>
                   <div className="flex items-center gap-1">
                     <h2 className="font-black text-white text-[15px]">
-                      {view === 'list' ? 'Lịch sử' : (mode === 'chat' ? 'Lili AI' : 'Sửa lỗi câu')}
+                      {view === 'list' ? 'Lịch sử' : (mode === 'chat' ? 'Hehe' : 'Sửa lỗi câu')}
                     </h2>
                     <HiChevronDown className={`text-white transition-transform ${showMenu ? 'rotate-180' : ''}`} />
                   </div>
                 </div>
 
-                {/* --- FULL MENU CON CỦA MÀY ĐÂY --- */}
+                {/* --- MENU CON --- */}
                 {showMenu && (
                   <>
                     <div className="fixed inset-0" onClick={() => setShowMenu(false)}></div>
@@ -162,11 +192,9 @@ const AIChat = ({ currentPage }) => {
                     <div className={`max-w-[85%] px-4 py-2.5 rounded-[24px] shadow-sm ${msg.role === 'user' ? 'bg-gradient-to-br from-[#ff416c] to-[#ff4b2b] text-white rounded-br-none' : 'bg-white text-[#4a3230] border border-[#ffeadb] rounded-bl-none'}`}>
                       {msg.role === 'ai' && showPinyin && <p className="text-[10px] text-[#ff4b2b] font-bold mb-1 opacity-80">{msg.pinyin}</p>}
                       {/* Chỗ hiện CHỮ HÁN (Dòng chữ to ở giữa) */}
-<p className="text-[14px] font-medium leading-relaxed tracking-wide text-[#2d3436]">
-    {/* Nếu có text thì hiện text, không thì hiện content. 
-        Đảm bảo biến này chứa chữ Hán từ API trả về */}
-    {msg.text || msg.content} 
-</p>
+                      <p className="text-[14px] font-medium leading-relaxed tracking-wide text-[#2d3436]">
+                          {msg.text || msg.content} 
+                      </p>
                       {msg.role === 'ai' && showTranslation && <div className="mt-2 pt-2 border-t border-[#fff5f0] text-[11px] text-[#8e7b79] italic">{msg.translation}</div>}
                     </div>
                   </div>
@@ -178,7 +206,12 @@ const AIChat = ({ currentPage }) => {
               <div className="p-4 bg-white border-t-2 border-[#fff5f0]">
                 <div className="flex items-center gap-3 bg-[#fdf2f0] rounded-full px-4 py-1.5 border-2 border-transparent focus-within:border-[#ff9068]">
                   <input type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} placeholder={mode === 'chat' ? "Nhập tin nhắn..." : "Dán câu cần sửa vào đây..."} className="flex-1 bg-transparent border-none focus:ring-0 text-[13.5px] outline-none" />
-                  <button onClick={handleSendMessage} className="text-[#ff416c]">{inputText.trim() ? <HiPaperAirplane size={22} className="rotate-90" /> : <HiMicrophone size={22} />}</button>
+                  <button 
+    onClick={inputText.trim() ? handleSendMessage : startListening} 
+    className={`transition-all ${!inputText.trim() ? 'hover:scale-125 text-blue-500' : 'text-[#ff416c]'}`}
+>
+    {inputText.trim() ? <HiPaperAirplane size={22} className="rotate-90" /> : <HiMicrophone size={22} />}
+</button>
                 </div>
               </div>
             </>

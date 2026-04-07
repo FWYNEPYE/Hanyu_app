@@ -49,23 +49,39 @@ namespace Server.Controllers
 
         // 3. Xóa bộ từ (Nếu cần)
         [HttpDelete("{id}")]
-public async Task<IActionResult> DeleteCategory(string id)
+        public async Task<IActionResult> DeleteCategory(string id)
+        {
+            var category = await _context.Categories.FindAsync(id);
+            if (category == null) return NotFound(new { message = "Không tìm thấy bộ từ này!" });
+
+            // 1. Tìm tất cả từ vựng thuộc bộ này
+            var relatedVocab = _context.Vocabularies.Where(v => v.CategoryID == id);
+            
+            // 2. Xóa đống từ vựng đó trước
+            _context.Vocabularies.RemoveRange(relatedVocab);
+
+            // 3. Bây giờ mới xóa bộ từ (Lúc này không còn ràng buộc nào nữa)
+            _context.Categories.Remove(category);
+            
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Đã xóa bộ từ và các từ vựng liên quan!" });
+        }
+        // 1.5 Lấy danh sách bộ từ theo UserID (Fix lỗi 404 cho SaveWordModal)
+[HttpGet("user/{userId}")]
+public async Task<ActionResult<IEnumerable<Category>>> GetUserCategories(int userId)
 {
-    var category = await _context.Categories.FindAsync(id);
-    if (category == null) return NotFound(new { message = "Không tìm thấy bộ từ này!" });
+    // Lấy những bộ từ của chính user đó HOẶC bộ từ mặc định của hệ thống (system)
+    var categories = await _context.Categories
+        .Where(c => c.UserID == userId || c.CategoryType == "user")
+        .ToListAsync();
 
-    // 1. Tìm tất cả từ vựng thuộc bộ này
-    var relatedVocab = _context.Vocabularies.Where(v => v.CategoryID == id);
-    
-    // 2. Xóa đống từ vựng đó trước
-    _context.Vocabularies.RemoveRange(relatedVocab);
+    if (categories == null || !categories.Any())
+    {
+        return Ok(new List<Category>()); // Trả về mảng rỗng thay vì lỗi nếu chưa có gì
+    }
 
-    // 3. Bây giờ mới xóa bộ từ (Lúc này không còn ràng buộc nào nữa)
-    _context.Categories.Remove(category);
-    
-    await _context.SaveChangesAsync();
-
-    return Ok(new { message = "Đã xóa bộ từ và các từ vựng liên quan!" });
+    return Ok(categories);
 }
     }
 }

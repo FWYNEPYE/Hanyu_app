@@ -38,7 +38,9 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    
 builder.Services.AddHttpClient<GroqService>();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll",
