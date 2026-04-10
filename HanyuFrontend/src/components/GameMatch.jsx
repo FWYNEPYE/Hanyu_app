@@ -146,7 +146,7 @@ const GameMatch = ({ data, onBack }) => {
         .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }
       `}</style>
 
-      {/* --- MODAL THOÁT (Cấu trúc cũ) --- */}
+      {/* --- MODAL THOÁT --- */}
       {showModal && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowModal(null)} />
@@ -164,7 +164,7 @@ const GameMatch = ({ data, onBack }) => {
         </div>
       )}
 
-      {/* --- TOP BAR (Cấu trúc cũ) --- */}
+      {/* --- TOP BAR  --- */}
       <div className="w-full max-w-5xl bg-white rounded-[25px] md:rounded-full px-4 md:px-8 py-3 md:py-4 flex flex-wrap items-center justify-between gap-y-4 mb-8 shadow-sm border border-indigo-50/50">
         <div className="flex items-center gap-3 md:gap-6 order-1">
             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{matched.length} / {data.length}</span>
@@ -184,7 +184,7 @@ const GameMatch = ({ data, onBack }) => {
         </div>
       </div>
 
-      {/* --- GAME BOARD (Thêm getGridClass) --- */}
+      {/* --- GAME BOARD  --- */}
       <div className={`grid ${getGridClass()} gap-3 sm:gap-6 w-full max-w-6xl px-2 mb-10`}>
         {cards.map((card, index) => {
           const isSelected = selected.some(s => s.index === index);
@@ -193,18 +193,25 @@ const GameMatch = ({ data, onBack }) => {
 
           return (
             <button
-              key={index}
-              disabled={isMatched || isWrong}
-              onClick={() => handleSelect(card, index)}
-              className={`
-                aspect-[4/3] sm:aspect-video rounded-[25px] sm:rounded-[35px] font-black transition-all duration-300 flex items-center justify-center p-3 sm:p-6 text-center shadow-sm border-4
-                ${isMatched ? 'bg-green-50 border-green-200 text-green-500 opacity-0 pointer-events-none scale-75' : 
-                  isSelected ? 'bg-indigo-600 border-indigo-300 text-white scale-105 shadow-xl' : 
-                  isWrong ? 'bg-red-500 border-red-300 text-white animate-shake' :
-                  'bg-white border-transparent hover:border-indigo-100 text-slate-600 hover:-translate-y-1 active:scale-95'}
-                ${cards.length > 20 ? 'text-[10px] sm:text-xs' : 'text-sm sm:text-xl'}
-              `}
-            >
+  key={index}
+  disabled={isMatched || isWrong}
+  onClick={() => handleSelect(card, index)}
+  className={`
+    aspect-[4/3] sm:aspect-video 
+    rounded-[25px] sm:rounded-[35px]
+    font-black transition-all duration-300
+    flex items-center justify-center
+    w-full h-full
+    p-3 sm:p-6 text-center
+    shadow-sm border-4
+    break-all whitespace-normal
+    ${isMatched ? 'bg-green-50 border-green-200 text-green-500 opacity-0 pointer-events-none scale-75' : 
+      isSelected ? 'bg-indigo-600 border-indigo-300 text-white scale-105 shadow-xl' : 
+      isWrong ? 'bg-red-500 border-red-300 text-white animate-shake' :
+      'bg-white border-transparent hover:border-indigo-100 text-slate-600 hover:-translate-y-1 active:scale-95'}
+    ${cards.length > 20 ? 'text-[10px] sm:text-[12px]' : 'text-sm sm:text-lg'}
+  `}
+>
               {isMatched ? <HiOutlineCheckCircle size={40} /> : card.val}
             </button>
           );

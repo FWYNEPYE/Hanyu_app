@@ -2,6 +2,7 @@ namespace HanyuBackend.Models
 {
     public class SubtitleDto
     {
+        public string Text { get; set; } = "";
         public List<TokenDto> Tokens { get; set; } = new();
         public string Pinyin { get; set; } = "";
         public string Vi { get; set; } = "";

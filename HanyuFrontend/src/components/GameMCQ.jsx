@@ -195,8 +195,8 @@ const GameMCQ = ({ data, onBack }) => { // Nhận data từ Game.jsx
       {/* MAIN GAME */}
       <div className="w-full max-w-2xl bg-white p-8 sm:p-14 rounded-[50px] md:rounded-[60px] shadow-2xl text-center border border-white relative">
         <div className="flex flex-col items-center mb-8 md:mb-12">
-            <h3 className="text-5xl md:text-8xl font-black text-gray-800 mb-2 tracking-tighter">{questions[currentIdx]?.word}</h3>
-            <p className="text-gray-400 font-black italic mb-6 md:mb-10 text-xl tracking-widest">{questions[currentIdx]?.pinyin}</p>
+            <h3 className="text-3xl md:text-5xl font-black text-gray-800 mb-2 tracking-tighter">{questions[currentIdx]?.word}</h3>
+            <p className="text-gray-400 font-black mb-6 md:mb-10 text-xl tracking-widest">/{questions[currentIdx]?.pinyin}/</p>
             <button 
               onClick={() => playAudio(questions[currentIdx]?.word)}
               className="bg-indigo-600 text-white p-4 md:p-5 rounded-full shadow-xl hover:scale-110 active:scale-95 transition-all"
@@ -218,7 +218,7 @@ const GameMCQ = ({ data, onBack }) => { // Nhận data từ Game.jsx
                 onClick={() => handleAnswer(opt)} 
                 disabled={!!selectedAnswer}
                 className={`
-                  py-4 md:py-6 rounded-[25px] md:rounded-[30px] font-black text-base md:text-xl transition-all active:scale-95 border-4
+                  py-4 md:py-6 rounded-[25px] md:rounded-[30px] font-bold text-sm md:text-lg whitespace-normal break-words text-center transition-all active:scale-95 border-4
                   ${isCorrectChoice || shouldShowGreen ? 'bg-green-500 border-green-200 text-white' : 
                     isWrongChoice ? 'bg-red-500 border-red-200 text-white animate-shake' : 
                     'bg-gray-50 border-transparent text-slate-600 hover:bg-white hover:border-indigo-100'}

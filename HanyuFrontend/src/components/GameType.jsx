@@ -197,7 +197,7 @@ const GameType = ({ filters, onBack }) => {
 
       {/* MAIN CARD */}
       <div className={`w-full max-w-2xl bg-white rounded-[40px] md:rounded-[60px] p-8 md:p-16 flex flex-col items-center shadow-xl relative border transition-all ${isError ? 'border-red-300 animate-shake' : 'border-white'}`}>
-        <h2 className="text-3xl md:text-5xl font-black text-slate-800 mb-6 tracking-tight text-center">
+        <h2 className="text-3xl md:text-4xl font-black text-slate-800 mb-6 tracking-tight text-center">
           {mode === 'vi-cn' ? questions[currentIdx].vi : questions[currentIdx].cn}
         </h2>
         
@@ -205,7 +205,7 @@ const GameType = ({ filters, onBack }) => {
           <button onClick={playTTS} className="text-sky-400 hover:scale-110 active:scale-95 transition-transform bg-sky-50 p-2 rounded-full">
             <HiOutlineVolumeUp size={28}/>
           </button>
-          <span className="bg-purple-100 text-purple-600 text-[10px] font-black px-4 py-1.5 rounded-lg uppercase tracking-widest italic">
+          <span className="bg-purple-100 text-purple-600 text-[10px] font-black px-4 py-1.5 rounded-lg uppercase tracking-widest ">
             {questions[currentIdx].type}
           </span>
         </div>
@@ -219,7 +219,7 @@ const GameType = ({ filters, onBack }) => {
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             placeholder={mode === 'vi-cn' ? "Gõ Hanzi hoặc Pinyin..." : "Gõ nghĩa tiếng Việt..."}
-            className={`w-full border-4 rounded-full py-4 md:py-6 px-8 text-center text-xl md:text-2xl font-bold outline-none transition-all shadow-inner 
+            className={`w-full border-4 rounded-full py-4 md:py-6 px-8 text-center text-xl md:text-base font-bold outline-none transition-all shadow-inner 
               ${isError ? 'border-red-200 bg-red-50 text-red-500' : 'border-slate-50 bg-slate-50/50 text-slate-700 focus:border-sky-200'}`}
           />
         </form>
@@ -227,7 +227,7 @@ const GameType = ({ filters, onBack }) => {
         <button 
           onClick={handleSubmit}
           disabled={!inputValue.trim()}
-          className={`px-16 py-5 rounded-[25px] font-black text-xl md:text-2xl shadow-[0_6px_0_#4E8300] active:translate-y-1 active:shadow-none transition-all uppercase italic tracking-tighter text-white
+          className={`px-16 py-5 rounded-[25px] font-black text-xl md:text-base shadow-[0_6px_0_#4E8300] active:translate-y-1 active:shadow-none transition-all uppercase  tracking-tighter text-white
             ${inputValue.trim() ? 'bg-[#72C100] hover:bg-[#63A700]' : 'bg-slate-200 shadow-none cursor-not-allowed'}
           `}
         >

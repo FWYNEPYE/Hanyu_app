@@ -16,25 +16,25 @@ namespace Server.Controllers
             _context = context;
         }
 
-        // 1. Lấy danh sách tất cả bộ từ để hiện lên giao diện
+        //  Lấy danh sách tất cả bộ từ để hiện lên giao diện
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
         {
             return await _context.Categories.ToListAsync();
         }
 
-        // 2. Tạo bộ từ mới (Đây là cái đang bị lỗi 404 này)
+        // 2. Tạo bộ từ mới 
         [HttpPost]
         public async Task<ActionResult<Category>> PostCategory(Category category)
         {
-            // 1. Nếu Frontend không gửi ID, tự tạo ID từ Name (Ví dụ: "Tiếng Trung" -> "tieng-trung")
+            //  Nếu Frontend không gửi ID, tự tạo ID từ Name
             if (string.IsNullOrEmpty(category.CategoryID))
             {
                 // Tạo slug đơn giản hoặc dùng Guid cho chắc chắn 100% không trùng
                 category.CategoryID = Guid.NewGuid().ToString().Substring(0, 8); 
             }
 
-            // 2. Kiểm tra lại lần nữa cho chắc
+            // Kiểm tra lại
             var exists = await _context.Categories.AnyAsync(c => c.CategoryID == category.CategoryID);
             if (exists)
             {
@@ -47,38 +47,38 @@ namespace Server.Controllers
             return Ok(category);
         }
 
-        // 3. Xóa bộ từ (Nếu cần)
+        // Xóa bộ từ
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCategory(string id)
         {
             var category = await _context.Categories.FindAsync(id);
             if (category == null) return NotFound(new { message = "Không tìm thấy bộ từ này!" });
 
-            // 1. Tìm tất cả từ vựng thuộc bộ này
+            //  Tìm tất cả từ vựng thuộc bộ này
             var relatedVocab = _context.Vocabularies.Where(v => v.CategoryID == id);
             
-            // 2. Xóa đống từ vựng đó trước
+            //  Xóa đống từ vựng đó trước
             _context.Vocabularies.RemoveRange(relatedVocab);
 
-            // 3. Bây giờ mới xóa bộ từ (Lúc này không còn ràng buộc nào nữa)
+            // xóa bộ
             _context.Categories.Remove(category);
             
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Đã xóa bộ từ và các từ vựng liên quan!" });
         }
-        // 1.5 Lấy danh sách bộ từ theo UserID (Fix lỗi 404 cho SaveWordModal)
+        //Lấy danh sách bộ từ theo UserID 
 [HttpGet("user/{userId}")]
 public async Task<ActionResult<IEnumerable<Category>>> GetUserCategories(int userId)
 {
     // Lấy những bộ từ của chính user đó HOẶC bộ từ mặc định của hệ thống (system)
     var categories = await _context.Categories
-        .Where(c => c.UserID == userId || c.CategoryType == "user")
+        .Where(c => c.UserID == userId || c.CategoryType == "system")
         .ToListAsync();
 
     if (categories == null || !categories.Any())
     {
-        return Ok(new List<Category>()); // Trả về mảng rỗng thay vì lỗi nếu chưa có gì
+        return Ok(new List<Category>()); // Trả về mảng rỗng
     }
 
     return Ok(categories);

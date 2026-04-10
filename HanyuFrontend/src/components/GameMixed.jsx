@@ -59,7 +59,7 @@ const GameMixed = ({ data, onBack }) => { // Nhận data từ cha truyền vào
     return () => window.removeEventListener('popstate', handlePopState);
   }, [isGameOver]);
 
-  // --- LOGIC HỨNG TÍN HIỆU SIDEBAR ---
+  // --- HỨNG TÍN HIỆU SIDEBAR ---
   useEffect(() => {
     const checkTrigger = setInterval(() => {
       const trigger = localStorage.getItem('show_exit_trigger');
@@ -86,7 +86,7 @@ const GameMixed = ({ data, onBack }) => { // Nhận data từ cha truyền vào
     }
   };
 
-  // --- LOGIC TRỘN DATA THÀNH GAME MIXED ---
+  // --- TRỘN DATA THÀNH GAME MIXED ---
   const initGame = useCallback(() => {
     if (!data || data.length === 0) return;
     setIsLoading(true);
@@ -96,7 +96,7 @@ const GameMixed = ({ data, onBack }) => { // Nhận data từ cha truyền vào
       const formatted = data.map((item) => {
         const randomType = types[Math.floor(Math.random() * types.length)];
         
-        // Tạo distractors (đáp án sai)
+        // Tạo đáp án sai
         const distractors = data
           .filter(d => d.id !== item.id)
           .sort(() => 0.5 - Math.random())
@@ -254,7 +254,7 @@ const GameMixed = ({ data, onBack }) => { // Nhận data từ cha truyền vào
         <button 
           onClick={handleCheck} 
           disabled={currentQ.type !== 'TYPE' && !selectedOpt} 
-          className={`px-12 py-4 rounded-2xl font-black text-lg shadow-[0_4px_0_#4E8300] active:translate-y-1 active:shadow-none transition-all uppercase italic tracking-wider text-white ${(currentQ.type === 'TYPE' ? inputValue.trim() : selectedOpt) ? 'bg-[#72C100]' : 'bg-slate-200 shadow-none opacity-50'}`}
+          className={`px-12 py-4 rounded-2xl font-black text-base shadow-[0_4px_0_#4E8300] active:translate-y-1 active:shadow-none transition-all uppercase  tracking-wider text-white ${(currentQ.type === 'TYPE' ? inputValue.trim() : selectedOpt) ? 'bg-[#72C100]' : 'bg-slate-200 shadow-none opacity-50'}`}
         >
           {currentIdx === questions.length - 1 ? 'Xong rồi' : 'Tiếp theo'}
         </button>

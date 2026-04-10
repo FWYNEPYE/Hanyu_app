@@ -20,5 +20,11 @@ namespace Server.Models
         public IFormFile? File { get; set; } 
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public int? UserID { get; set; } 
+
+        [ForeignKey("UserID")]
+        public virtual User? User { get; set; }
+        
+        public virtual ICollection<Subtitle> Subtitles { get; set; } = new List<Subtitle>();    
     }
 }

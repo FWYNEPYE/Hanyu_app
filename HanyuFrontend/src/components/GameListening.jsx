@@ -22,7 +22,7 @@ const GameListening = ({ filters, onBack }) => {
   const inputRef = useRef(null);
   const navigate = useNavigate();
 
-  // --- 1. LOGIC CHẶN VUỐT BACK (MOBILE) ---
+  // ---  LOGIC CHẶN VUỐT BACK ---
   useEffect(() => {
     if (isGameOver) return;
     window.history.pushState(null, "", window.location.pathname);
@@ -34,7 +34,7 @@ const GameListening = ({ filters, onBack }) => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [isGameOver]);
 
-  // --- 2. LOGIC HỨNG TÍN HIỆU TỪ SIDEBAR ---
+  // --- LOGIC HỨNG TÍN HIỆU TỪ SIDEBAR ---
   useEffect(() => {
     const checkTrigger = setInterval(() => {
       const trigger = localStorage.getItem('show_exit_trigger');
@@ -49,7 +49,7 @@ const GameListening = ({ filters, onBack }) => {
     };
   }, []);
 
-  // --- 3. HÀM XÁC NHẬN THOÁT CHUẨN ---
+  // ---  HÀM XÁC NHẬN THOÁT CHUẨN ---
   const handleConfirmAction = () => {
     if (showModal === 'restart') {
       initGame();
@@ -220,8 +220,8 @@ const GameListening = ({ filters, onBack }) => {
                 <FaHeadphones size={32} className="md:size-[48px]" />
             </button>
             <div className="flex flex-col items-center gap-2">
-                <h3 className="text-xl md:text-3xl font-black text-slate-800 tracking-tight">Nghe và gõ lại từ</h3>
-                <span className="bg-pink-50 text-pink-400 text-[10px] font-black px-4 py-1.5 rounded-lg uppercase tracking-widest italic">{currentQ?.type}</span>
+                <h3 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Nghe và gõ lại từ</h3>
+                <span className="bg-pink-50 text-pink-400 text-[10px] font-black px-4 py-1.5 rounded-lg uppercase tracking-widest ">{currentQ?.type}</span>
             </div>
         </div>
 
@@ -234,7 +234,7 @@ const GameListening = ({ filters, onBack }) => {
             onFocus={handleInputFocus}
             onBlur={() => setIsInputFocused(false)}
             placeholder={hasStarted ? "Gõ Hanzi hoặc Pinyin..." : "Chạm vào đây để bắt đầu..."}
-            className={`w-full border-4 rounded-full py-4 md:py-5 px-8 text-center text-lg md:text-xl font-bold outline-none transition-all shadow-inner 
+            className={`w-full border-4 rounded-full py-4 md:py-5 px-8 text-center text-lg md:text-base font-bold outline-none transition-all shadow-inner 
               ${isError ? 'border-red-200 bg-red-50 text-red-500' : 'border-slate-50 bg-slate-50/50 text-slate-600 focus:border-indigo-200'}`}
           />
         </form>
@@ -242,7 +242,7 @@ const GameListening = ({ filters, onBack }) => {
         <button 
           onClick={handleSubmit}
           disabled={!inputValue.trim()}
-          className={`w-full max-w-xs py-4 md:py-5 rounded-[25px] font-black text-xl md:text-2xl transition-all uppercase italic tracking-widest text-white
+          className={`w-full max-w-xs py-4 md:py-5 rounded-[25px] font-black text-xl md:text-base transition-all uppercase  tracking-widest text-white
             ${inputValue.trim() ? 'bg-[#818CF8] shadow-[0_6px_0_#6366F1] active:translate-y-1 active:shadow-none' : 'bg-slate-200 cursor-not-allowed opacity-50'}
           `}
         >

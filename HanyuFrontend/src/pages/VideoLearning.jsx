@@ -1,250 +1,593 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { IoLanguageOutline, IoChatbubbleEllipsesOutline, IoCloudUploadOutline, IoLogoYoutube } from "react-icons/io5";
+import { 
+    IoAddCircleOutline, 
+    IoTrashOutline, 
+    IoVolumeHighOutline ,IoCloseOutline, 
+    IoFolderOpenOutline, IoLogoYoutube,    
+    IoCloudUploadOutline
+} from "react-icons/io5";
 import { HiChevronLeft } from "react-icons/hi";
+import YouTube from 'react-youtube';
+import axios from 'axios';
+
+const BASE_URL = 'http://localhost:5252/api/Videos';
 
 const VideoLearning = () => {
-  
-  const [videos, setVideos] = useState([
-    { id: 1, title: "Học tiếng Trung giao tiếp cơ bản", vid: "z6pG_XmD-7U" }
-  ]);
-  
-  // --- UI STATES ---
-  const [selectedVideo, setSelectedVideo] = useState(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isAISubsActive, setIsAISubsActive] = useState(false);
-  const [activeWord, setActiveWord] = useState(null);
-  const [popoverPos, setPopoverPos] = useState({ x: 0, y: 0 });
-  const [isVocabModalOpen, setIsVocabModalOpen] = useState(false);
-  const [showPinyin, setShowPinyin] = useState(true);
-  const [showMean, setShowMean] = useState(true);
-  const [addTab, setAddTab] = useState('youtube');
+    
+    const [currentUserId, setCurrentUserId] = useState(null);
 
-  // --- MOCK DATA (Thay bằng API call sau này) ---
-  const vocabGroups = [{ id: 1, name: "HSK 1" }, { id: 2, name: "Chuyên ngành IS" }];
-  const subtitles = [{ 
-    tokens: [
-      { char: "学习", pinyin: "xuéxí", mean: "Học tập", type: "V" },
-      { char: "汉语", pinyin: "hànyǔ", mean: "Tiếng Trung", type: "N" }
-    ],
-    pinyin: "Xuéxí hànyǔ", vi: "Học tiếng Trung"
-  }];
+    useEffect(() => {
+        // lấy User ID từ localStorage
+        const storedId = localStorage.getItem('userId');
+        
+        if (storedId) {
+            console.log("✅ Đã tìm thấy User ID từ localStorage:", storedId);
+            setCurrentUserId(parseInt(storedId));
+        } else {
+            console.error("❌ Không tìm thấy key 'userId' trong localStorage!");
+        }
+    }, []);
 
-  // --- XỬ LÝ BACK TRÊN THIẾT BỊ DI ĐỘNG ---
-  const handleBack = useCallback(() => {
-    if (selectedVideo) {
-      setSelectedVideo(null);
-      setIsAISubsActive(false);
-    }
-  }, [selectedVideo]);
 
-  useEffect(() => {
-    if (selectedVideo) {
-      window.history.pushState(null, null, window.location.pathname);
-      const handlePopState = () => {
-        handleBack();
-      };
-      window.addEventListener('popstate', handlePopState);
-      return () => window.removeEventListener('popstate', handlePopState);
-    }
-  }, [selectedVideo, handleBack]);
 
-  // --- CLICK TỪ ---
-  const handleWordClick = (e, token) => {
-    const rect = e.target.getBoundingClientRect();
-    // Điều chỉnh vị trí popover linh hoạt cho cả Mobile và Desktop
-    const x = window.innerWidth < 768 ? (window.innerWidth / 2 - 100) : (rect.left + (rect.width / 2) - 100);
-    const y = rect.top - 150;
-    setPopoverPos({ x, y });
-    setActiveWord(token);
-  };
+    const [videos, setVideos] = useState([]);
+    const [subtitles, setSubtitles] = useState([]);
+    const [selectedVideo, setSelectedVideo] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isAISubsActive, setIsAISubsActive] = useState(false);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    
+    const [isSelectingGroup, setIsSelectingGroup] = useState(false);
+    const [vocabGroups, setVocabGroups] = useState([]); // Chứa danh sách bộ từ
+    const [newGroupName, setNewGroupName] = useState("");
 
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#1E293B] font-sans p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* danh sách */}
-        {!selectedVideo && (
-          <header className="flex justify-between items-center mb-8 md:mb-12">
-            <p></p>
-            <button 
-              onClick={() => setIsAddModalOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 md:px-6 md:py-3 rounded-2xl text-[10px] md:text-xs font-black shadow-lg shadow-blue-100 transition-all"
-            >
-              + THÊM VIDEO
-            </button>
-          </header>
-        )}
 
-        {!selectedVideo ? (
-          /* GRID DANH SÁCH VIDEO (Responsive 1-2-3 cột) */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {videos.map(v => (
-              <motion.div 
-                layoutId={`video-${v.id}`}
-                key={v.id} onClick={() => setSelectedVideo(v)}
-                className="bg-white rounded-[2rem] overflow-hidden border border-slate-200 cursor-pointer hover:shadow-xl transition-all group shadow-sm"
-              >
-                <div className="aspect-video bg-slate-100 flex items-center justify-center text-slate-400 font-bold uppercase text-[10px]">
-                  <img src={`https://img.youtube.com/vi/${v.vid}/maxresdefault.jpg`} className="w-full h-full object-cover" alt="" />
-                </div>
-                <div className="p-6 font-bold text-sm uppercase tracking-tight line-clamp-1">{v.title}</div>
-              </motion.div>
-            ))}
-          </div>
-        ) : (
-          /* TRANG VIDEO PLAYER */
-          <div className="animate-in fade-in slide-in-from-right duration-500">
+    const [addTab, setAddTab] = useState('youtube'); 
+    const [selectedFile, setSelectedFile] = useState(null);
+
+
+    const [deletingVideo, setDeletingVideo] = useState(null); 
+    const [showPinyin, setShowPinyin] = useState(true);
+    const [showMean, setShowMean] = useState(true);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [player, setPlayer] = useState(null);
+    const activeSubRef = useRef(null);
+    const [activeWord, setActiveWord] = useState(null);
+    const [popoverPos, setPopoverPos] = useState({ x: 0, y: 0 });
+
+    const [newTitle, setNewTitle] = useState("");
+    const [newUrl, setNewUrl] = useState("");
+
+
+    const getYoutubeId = (url) => {
+        if (!url) return "";
+        const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[7]) ? match[7].substring(0, 11) : (url.length === 11 ? url : "");
+    };
+
+    const getYouTubeThumbnail = (url) => {
+        const id = getYoutubeId(url);
+        return id ? `https://i.ytimg.com/vi/${id}/mqdefault.jpg` : ""; 
+    };
+
+    // --- API CALLS ---
+    const fetchVideos = async () => {
+        try {
+            const res = await axios.get(BASE_URL);
+            setVideos(res.data);
+        } catch (err) { console.error("Lỗi lấy danh sách video:", err); }
+    };
+
+
+
+    const fetchVideoDetail = async () => {
+        if (!selectedVideo) return;
+        const id = selectedVideo.videoId || selectedVideo.id; 
+        
+        try {
+            setIsLoading(true);
+            const res = await axios.get(`${BASE_URL}/${id}`);
+            const dbSubs = res.data.subtitles || res.data.Subtitles || [];
+
+            const formatted = dbSubs.map(s => ({
+                text: s.content || s.Content,
+                startTime: s.startTime || s.StartTime,
+                endTime: s.endTime || s.EndTime,
+                pinyin: s.pinyin || s.Pinyin,
+                vi: s.vi || s.translation || s.Translation || "Chưa có dịch", 
+                tokens: Array.isArray(s.tokens) ? s.tokens : (s.tokens ? JSON.parse(s.tokens) : [])
+            }));
+
+            setSubtitles(formatted);
+            setIsAISubsActive(formatted.length > 0);
+        } catch (err) {
+            console.error("Lỗi fetch detail:", err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => { fetchVideoDetail(); }, [selectedVideo]);
+
+
+    
+    useEffect(() => { 
+            fetchVideos(); 
+            if (currentUserId) {
+                console.log("Đang lấy bộ từ cho User ID:", currentUserId);
+                fetchVocabGroups(); 
+            } else {
+                console.warn("Không tìm thấy User ID trong localStorage");
+            }
+        }, [currentUserId]);
+
+        useEffect(() => { fetchVideos(); }, []);
+
+ 
+
+    const fetchVocabGroups = async () => {
+        if (!currentUserId) return;
+
+        try {
+            // API sẽ gọi: http://localhost:5252/api/Category/user/7
+            const res = await axios.get(`http://localhost:5252/api/Category/user/${currentUserId}`); 
             
-            <div className="mb-4 md:mb-6 flex items-center gap-2">
-              <HiChevronLeft  size={32}  className="text-gray-600 cursor-pointer active:scale-90 transition-transform -ml-2"   onClick={handleBack}  />
-            </div>
+            console.log("Dữ liệu trả về:", res.data);
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
-              {/* VIDEO CỘT TRÁI */}
-              <div className={`${isAISubsActive ? 'lg:col-span-7' : 'lg:col-span-12 w-full max-w-5xl mx-auto'} transition-all duration-700`}>
-                <div className="aspect-video bg-black rounded-2xl md:rounded-[2.5rem] overflow-hidden shadow-2xl border-4 md:border-8 border-white mb-6">
-                  <iframe src={`https://www.youtube.com/embed/${selectedVideo.vid}`} className="w-full h-full" allowFullScreen />
-                </div>
+        
+            if (res.data && Array.isArray(res.data)) {
+                setVocabGroups(res.data);
+            } else if (res.data?.$values) {
+                setVocabGroups(res.data.$values);
+            }
+        } catch (err) { 
+            console.error("Lỗi lấy bộ từ:", err); 
+            setVocabGroups([]);
+        }
+    };
 
-                {!isAISubsActive && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white p-6 rounded-3xl border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
+
+
+    // Tạo bộ từ mới
+    const handleCreateGroup = async () => {
+        if (!newGroupName.trim() || !currentUserId) return;
+        try {
+            const res = await axios.post(`http://localhost:5252/api/Category`, { 
+                categoryName: newGroupName,
+                userID: parseInt(currentUserId), // Bắt buộc ép kiểu sang Int cho khớp .NET
+                categoryType: "user"
+            });
+            // Sau khi tạo xong, nên load lại danh sách cho chắc
+            fetchVocabGroups(); 
+            setNewGroupName("");
+        } catch (err) { console.error("Lỗi tạo bộ từ:", err); }
+    };
+
+
+    // Lưu từ vựng
+    const saveWordToGroup = async (groupId) => {
+        if (!activeWord || !currentUserId) return;
+
+        try {
+            const payload = {
+                // Khớp chính xác với các Property trong class Vocabulary
+                hanzi: activeWord.char || activeWord.text,
+                pinyin: activeWord.pinyin,
+                meaning: activeWord.vi || activeWord.mean || "Chưa có nghĩa",
+                type: "Video_Learning", 
+                level: 1, 
+                categoryID: groupId, // Lưu ý: CategoryID ở Backend là string
+                note: "Lưu từ video"
+            };
+
+            const res = await axios.post(`http://localhost:5252/api/Vocabulary`, payload);
+            
+            if (res.status === 200 || res.status === 201) {
+                setActiveWord(null);
+                setIsSelectingGroup(false);
                 
-                    <button 
-                      onClick={() => setIsAISubsActive(true)}
-                      className="w-full md:w-auto bg-blue-600 text-white px-8 py-4 rounded-2xl text-xs font-black hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all active:scale-95"
-                    >
-                      ✨ PHỤ ĐỀ AI
-                    </button>
-                  </motion.div>
-                )}
-              </div>
+            }
+        } catch (err) { 
+            console.error("Lỗi từ Server:", err.response?.data);
+            alert("Không thể lưu từ!"); 
+        }
+    };
+   
 
-              {/* PHỤ ĐỀ CỘT PHẢI */}
-              <AnimatePresence>
-                {isAISubsActive && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20, lg: { x: 50, y: 0 } }} 
-                    animate={{ opacity: 1, y: 0, lg: { x: 0 } }}
-                    className="lg:col-span-5 bg-white rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 border border-slate-100 h-[500px] md:h-[600px] flex flex-col shadow-sm"
-                  >
-                    <div className="flex justify-between items-center mb-6 border-b border-slate-50 pb-5">
-                      <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">AI Analysis</span>
-                      <div className="flex gap-4">
-                        <button onClick={() => setShowPinyin(!showPinyin)} className={`text-xl transition-colors ${showPinyin ? 'text-blue-600' : 'text-slate-300'}`}><IoLanguageOutline /></button>
-                        <button onClick={() => setShowMean(!showMean)} className={`text-xl transition-colors ${showMean ? 'text-blue-600' : 'text-slate-300'}`}><IoChatbubbleEllipsesOutline /></button>
-                      </div>
-                    </div>
-                    
-                    <div className="flex-1 overflow-y-auto space-y-8 md:space-y-12 pr-2 custom-scrollbar">
-                      {subtitles.map((sub, i) => (
-                        <div key={i} className="animate-in fade-in slide-in-from-bottom-2">
-                          <div className="flex flex-wrap gap-2 mb-2">
-                            {sub.tokens.map((t, ti) => (
-                              <span key={ti} onClick={(e) => handleWordClick(e, t)} className="text-2xl md:text-3xl font-medium text-slate-800 hover:text-blue-600 cursor-pointer transition-colors leading-relaxed">{t.char}</span>
+    
+
+    useEffect(() => {
+        let interval;
+        if (player) {
+            interval = setInterval(() => setCurrentTime(player.getCurrentTime()), 300);
+        }
+        return () => clearInterval(interval);
+    }, [player]);
+
+    useEffect(() => {
+        if (activeSubRef.current) {
+            activeSubRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [currentTime]);
+
+    const handleAIAnalyze = async () => {
+        if (isLoading) return;
+        const id = selectedVideo?.videoId || selectedVideo?.id;
+        setIsLoading(true);
+        try {
+           await axios.post(`${BASE_URL}/${id}/auto-generate-sub`, {}, {
+    timeout: 300000 
+    });
+            await fetchVideoDetail(); 
+        } catch (err) {
+            alert("Lỗi khi phân tích AI!");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const speakChinese = (text) => {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'zh-CN';
+        utterance.rate = 0.8;
+        window.speechSynthesis.speak(utterance);
+    };
+
+    const handleWordClick = (e, token) => {
+        e.stopPropagation();
+        const rect = e.currentTarget.getBoundingClientRect();
+        setPopoverPos({ 
+            x: rect.left + rect.width / 2, 
+            y: rect.top 
+        });
+        setActiveWord(token);
+    };
+
+
+
+    const handleFinalDelete = async () => {
+        if (!deletingVideo) return;
+        try {
+            const id = deletingVideo.videoId || deletingVideo.id;
+            await axios.delete(`${BASE_URL}/${id}`);
+            setDeletingVideo(null);
+            fetchVideos();
+        } catch (err) { alert("Lỗi khi xóa video!"); }
+    };
+
+
+ 
+
+    const handleUpload = async () => {
+        // Kiểm tra đầu vào tùy theo tab
+        if (!newTitle) return alert("Vui lòng nhập tiêu đề!");
+        if (addTab === 'youtube' && !newUrl) return alert("Vui lòng dán link YouTube!");
+        if (addTab === 'local' && !selectedFile) return alert("Vui lòng chọn file video!");
+
+        try {
+            const formData = new FormData();
+            formData.append("Title", newTitle);
+            formData.append("VideoType", addTab); // 'youtube' hoặc 'local'
+
+            if (addTab === 'youtube') {
+                formData.append("UrlOrPath", newUrl);
+            } else {
+                formData.append("File", selectedFile);
+            }
+
+            await axios.post(`${BASE_URL}/upload`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            // Reset form và đóng modal
+            setIsAddModalOpen(false);
+            setNewTitle(""); 
+            setNewUrl("");
+            setSelectedFile(null);
+            fetchVideos();
+            alert("Thêm video thành công! 🎉");
+        } catch (err) { 
+            console.error(err);
+            alert("Lỗi khi thêm video!"); 
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-[#F1F5F9] p-4 md:p-8">
+            <div className="max-w-7xl mx-auto">
+                {!selectedVideo ? (
+                    <>
+                        <header className="flex justify-between items-center mb-12">
+                            {/* <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Hanyu Learning</h1> */}
+                            <p></p>
+                            <button onClick={() => setIsAddModalOpen(true)} className="bg-[#e5535a] text-white px-6 py-3 rounded-2xl text-[10px] font-black shadow-lg hover:bg-blue-700 transition-colors">
+                                + THÊM VIDEO MỚI
+                            </button>
+                        </header>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {videos.map((v) => (
+                                <div key={v.videoId || v.id} className="relative group">
+                                    <div onClick={() => setSelectedVideo(v)} className="bg-white rounded-[2rem] overflow-hidden shadow-sm hover:shadow-xl cursor-pointer transition-all border border-white hover:border-orange-200">
+                                        <div className="relative overflow-hidden">
+                                            <img src={getYouTubeThumbnail(v.urlOrPath)} className="w-full aspect-video object-cover" alt={v.title} />
+                                        </div>
+                                        <div className="p-5 font-bold text-center text-slate-700 uppercase text-[11px]">{v.title}</div>
+                                    </div>
+                                    <button onClick={(e) => { e.stopPropagation(); setDeletingVideo(v); }} className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                                        <IoTrashOutline size={18}/>
+                                    </button>
+                                </div>
                             ))}
-                          </div>
-                          {showPinyin && <p className="text-[10px] md:text-[11px] font-black text-blue-500 mb-1 tracking-tighter uppercase">{sub.pinyin}</p>}
-                          {showMean && <p className="text-[11px] md:text-xs text-slate-400 italic font-medium">{sub.vi}</p>}
                         </div>
-                      ))}
+                    </>
+                ) : (
+                    <div className="animate-in fade-in duration-500">
+                        <div className="flex items-center justify-between mb-6">
+                            <button onClick={() => {setSelectedVideo(null); setIsAISubsActive(false)}} className="flex items-center gap-2 text-slate-500 font-bold hover:text-blue-600 transition-colors">
+                                <HiChevronLeft size={24}/> 
+                            </button>
+                            {isAISubsActive && (
+                                <div className="flex gap-2 bg-white p-1 rounded-2xl shadow-sm border border-slate-200">
+                                    <button onClick={() => setShowPinyin(!showPinyin)} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${showPinyin ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>PINYIN</button>
+                                    <button onClick={() => setShowMean(!showMean)} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${showMean ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>NGHĨA</button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                            <div className={isAISubsActive ? "lg:col-span-7" : "lg:col-span-12"}>
+                                <div className="aspect-video bg-black rounded-[2.5rem] overflow-hidden border-8 border-white shadow-2xl">
+                                    <YouTube 
+                                        videoId={getYoutubeId(selectedVideo.urlOrPath)} 
+                                        onReady={(e) => setPlayer(e.target)}
+                                        opts={{ width: '100%', height: '100%', playerVars: { autoplay: 1, enablejsapi: 1, origin: 'http://localhost:5173' } }} 
+                                        className="w-full h-full"
+                                    />
+                                </div>
+                                {!isAISubsActive && !isLoading && (
+                                    <div className="mt-8 text-center p-12 bg-white rounded-[3rem] border-2 border-dashed border-slate-200">
+                                        <button onClick={handleAIAnalyze} className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black shadow-xl hover:bg-blue-700 transition-all">BẮT ĐẦU PHÂN TÍCH AI</button>
+                                    </div>
+                                )}
+                                {isLoading && <p className="mt-8 text-center font-black text-slate-400 animate-pulse tracking-widest text-xs uppercase">AI IS ANALYZING...</p>}
+                            </div>
+
+                            {isAISubsActive && (
+                                <div className="lg:col-span-5 bg-white rounded-[2.5rem] p-6 h-[600px] overflow-y-auto shadow-inner border border-slate-200 scroll-smooth scroll-pt-10">
+                                    <div className="space-y-6">
+                                        {subtitles.map((sub, i) => {
+                                            const isActive = currentTime >= sub.startTime && currentTime <= sub.endTime;
+                                            return (
+                                                <div key={i} ref={isActive ? activeSubRef : null} onClick={() => player.seekTo(sub.startTime)}
+                                                    className={`p-6 rounded-[2rem] transition-all duration-300 border-2 cursor-pointer ${isActive ? 'bg-blue-50 border-blue-400 shadow-xl' : 'border-transparent opacity-40 hover:opacity-100'}`}>
+                                                    <div className="flex flex-wrap gap-x-2 gap-y-3">
+                                                        {sub.tokens?.map((t, ti) => (
+                                                            <div key={ti} className="flex flex-col items-center hover:bg-blue-100 rounded-lg p-1 transition-all" onClick={(e) => handleWordClick(e, t)}>
+                                                                {showPinyin && <p className="text-[10px] text-blue-500 font-black">{t.pinyin || t.Pinyin}</p>}
+                                                                <p className="text-2xl font-medium text-slate-800">{t.char || t.Char || t.text}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    {showMean && <p className="mt-4 text-slate-400 italic text-sm font-medium border-t pt-3">{sub.vi}</p>}
+                                                </div>
+                                            );
+                                        })}
+                                        <div className="h-[400px]"></div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                  </motion.div>
                 )}
-              </AnimatePresence>
             </div>
-          </div>
-        )}
 
-        {/* --- MODAL THÊM VIDEO MỚI --- */}
-        <AnimatePresence>
-          {isAddModalOpen && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-              <div onClick={() => setIsAddModalOpen(false)} className="absolute inset-0 bg-slate-900/20 backdrop-blur-md" />
-              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white w-full max-w-sm rounded-[2rem] p-6 md:p-10 relative z-[210] shadow-2xl border border-slate-50">
-                 <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-6 text-center border-b pb-4">Nhập video</h2>
-                 <div className="flex bg-slate-50 p-1 rounded-xl mb-6">
-                    <button onClick={() => setAddTab('youtube')} className={`flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase transition-all flex items-center justify-center gap-2 ${addTab === 'youtube' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}><IoLogoYoutube /> YouTube</button>
-                    <button onClick={() => setAddTab('local')} className={`flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase transition-all flex items-center justify-center gap-2 ${addTab === 'local' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}><IoCloudUploadOutline /> Local</button>
-                 </div>
-                 <div className="space-y-4">
-                    <input type="text" placeholder="Tiêu đề..." 
-                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-xs font-bold outline-none" 
+            {/* MODALS & POPOVERS */}
+            <AnimatePresence>
+               {isAddModalOpen && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                    {/*  blur cam hồng các thứ*/}
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setIsAddModalOpen(false)} 
+                        className="absolute inset-0 bg-rose-900/20 backdrop-blur-md" 
                     />
-                    {addTab === 'youtube' ? (
-                      <input  type="text" placeholder="Dán URL Youtube..."   className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-xs outline-none animate-in fade-in slide-in-from-left-2" />
-                    ) : (
-                      <div className="relative animate-in fade-in slide-in-from-right-2">
-                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all group">
-                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                            <IoCloudUploadOutline className="text-2xl text-slate-400 group-hover:text-blue-500 mb-2" />
-                            <p className="text-[10px] font-black text-slate-400 uppercase group-hover:text-blue-500">Bấm để tải video</p>
-                          </div>
-                          <input  type="file"   className="hidden"  accept="video/*" 
-                            onChange={(e) => console.log("File đã chọn:", e.target.files[0])} 
-                          />
-                        </label>
-                      </div>
-                    )}
-                    <button className="w-full bg-blue-600 text-white py-4 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-blue-100 mt-2 active:scale-95 transition-transform"> THÊM</button>
-                  </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
+                    
+                    <motion.div 
+                        initial={{ scale: 0.9, opacity: 0, y: 20 }} 
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                        className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 relative z-[210] shadow-[0_20px_50px_rgba(255,71,121,0.2)] border border-rose-50"
+                    >
+                        {/* <h2 className="text-sm font-black text-rose-600 uppercase tracking-[0.2em] mb-6 text-center">
+                        Thêm bài học mới
+                        </h2> */}
 
-        {/* --- POPOVER TỪ VỰNG --- */}
-        <AnimatePresence>
-          {activeWord && (
-            <>
-              <div className="fixed inset-0 z-[100]" onClick={() => setActiveWord(null)}></div>
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                className="fixed z-[110] w-[200px] bg-red-500/10 backdrop-blur-xl rounded-2xl shadow-2xl p-4 border border-red-200/20"
-                style={{ left: popoverPos.x, top: popoverPos.y }}
-              >
-                <div className="flex justify-between items-center mb-1 text-red-950">
-                   <span className="text-2xl font-bold">{activeWord.char}</span>
-                   <span className="text-[8px] font-black bg-red-600/80 text-white px-2 py-0.5 rounded uppercase">{activeWord.type}</span>
-                </div>
-                <p className="text-[10px] font-bold text-red-800 uppercase mb-2 leading-none">{activeWord.pinyin}</p>
-                <p className="text-[11px] text-red-900 mb-4 font-medium italic italic leading-tight">"{activeWord.mean}"</p>
-                <button 
-                  onClick={() => { setIsVocabModalOpen(true); setActiveWord(null); }}
-                  className="w-full bg-red-600 text-white py-2 rounded-xl text-[9px] font-black uppercase hover:bg-red-700 transition-all"
-                >
-                  +Lưu lại từ này
-                </button>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+                        <div className="flex bg-rose-50/50 p-1.5 rounded-2xl mb-6">
+                        <button 
+                            onClick={() => setAddTab('youtube')} 
+                            className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all duration-300 flex items-center justify-center gap-2 ${addTab === 'youtube' ? 'bg-white shadow-md text-orange-500' : 'text-rose-300 hover:text-rose-400'}`}
+                        >
+                            <IoLogoYoutube size={14}/> YouTube
+                        </button>
+                        <button 
+                            onClick={() => setAddTab('local')} 
+                            className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all duration-300 flex items-center justify-center gap-2 ${addTab === 'local' ? 'bg-white shadow-md text-orange-500' : 'text-rose-300 hover:text-rose-400'}`}
+                        >
+                            <IoCloudUploadOutline size={14}/> Thiết bị
+                        </button>
+                        </div>
 
-        {/* --- MODAL LƯU TỪ VỰNG --- */}
-        <AnimatePresence>
-          {isVocabModalOpen && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-              <div onClick={() => setIsVocabModalOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-              <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 relative z-[210] shadow-2xl">
-                 <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-widest mb-6 border-b pb-4 text-center italic">Bộ từ</h2>
-                 <div className="space-y-2 mb-6 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                    {vocabGroups.map(g => (
-                      <button key={g.id} className="w-full text-left px-5 py-3 rounded-xl border border-slate-50 hover:bg-blue-50 text-xs font-bold text-slate-600 transition-all">
-                        {g.name}
-                      </button>
-                    ))}
-                 </div>
-                 <div className="pt-4 border-t border-slate-50 flex gap-2">
-                    <input type="text" placeholder="Bộ mới..." className="flex-1 bg-slate-50 border rounded-xl px-4 py-2 text-xs outline-none font-bold" />
-                    <button className="bg-slate-900 text-white px-4 py-2 rounded-xl text-[10px] font-black">LƯU</button>
-                 </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
+                        <div className="space-y-4">
+                        {/* Input Tiêu đề */}
+                        <div className="group">
+                            <input 
+                            value={newTitle}
+                            onChange={(e) => setNewTitle(e.target.value)}
+                            type="text" 
+                            placeholder="Đặt tên cho video..." 
+                            className="w-full bg-orange-50/30 border border-orange-100 rounded-2xl px-5 py-4 text-xs font-bold outline-none focus:border-orange-300 focus:bg-white transition-all placeholder:text-rose-200 text-rose-700" 
+                            />
+                        </div>
 
-      </div>
-    </div>
-  );
+                        {addTab === 'youtube' ? (
+                            /* Tab YouTube */
+                            <motion.input 
+                            initial={{ x: -10, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            value={newUrl}
+                            onChange={(e) => setNewUrl(e.target.value)}
+                            type="text" 
+                            placeholder="Dán link YouTube vào đây..." 
+                            className="w-full bg-rose-50/30 border border-rose-100 rounded-2xl px-5 py-4 text-xs outline-none focus:border-rose-300 focus:bg-white transition-all placeholder:text-rose-200 text-rose-700 font-medium" 
+                            />
+                        ) : (
+                            /* Tab Local (Tải lên từ thiết bị) */
+                            <motion.div 
+                            initial={{ x: 10, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            className="relative"
+                            >
+                            <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-rose-100 rounded-[2rem] cursor-pointer bg-rose-50/20 hover:bg-rose-50 hover:border-rose-300 transition-all group overflow-hidden">
+                                <div className="flex flex-col items-center justify-center px-4 text-center">
+                                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm mb-3 group-hover:scale-110 transition-transform">
+                                    <IoCloudUploadOutline className="text-xl text-orange-400" />
+                                </div>
+                                <p className="text-[10px] font-black text-rose-300 uppercase tracking-tighter group-hover:text-rose-500">
+                                    {selectedFile ? selectedFile.name : "Chọn video"}
+                                </p>
+                                </div>
+                                <input 
+                                type="file" 
+                                className="hidden" 
+                                accept="video/*" 
+                                onChange={(e) => setSelectedFile(e.target.files[0])}
+                                />
+                            </label>
+                            </motion.div>
+                        )}
+
+                        <button 
+                            onClick={handleUpload}
+                            className="w-full bg-gradient-to-r from-rose-400 via-orange-400 to-pink-400 text-white py-4 rounded-2xl text-[11px] font-black uppercase shadow-lg shadow-rose-200/50 mt-4 active:scale-95 hover:shadow-xl hover:brightness-105 transition-all"
+                        >
+                            Lưu video
+                        </button>
+                        </div>
+                        
+                        <button 
+                        onClick={() => setIsAddModalOpen(false)}
+                        className="absolute top-4 right-4 text-rose-200 hover:text-rose-500 transition-colors"
+                        >
+                        <IoCloseOutline size={24} />
+                        </button>
+                    </motion.div>
+                    </div>
+                )}
+
+                {deletingVideo && (
+                    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+                        <div onClick={() => setDeletingVideo(null)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" />
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white w-full max-w-sm rounded-[3rem] p-10 relative z-[310] text-center">
+                            <IoTrashOutline size={40} className="text-red-500 mx-auto mb-4" />
+                            <h2 className="text-xl font-black mb-2">Xóa video này?</h2>
+                            <div className="grid grid-cols-2 gap-4 mt-6">
+                                <button onClick={() => setDeletingVideo(null)} className="bg-slate-100 py-4 rounded-2xl font-black">HỦY</button>
+                                <button onClick={handleFinalDelete} className="bg-red-500 text-white py-4 rounded-2xl font-black">XÓA</button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+
+                {activeWord && !isSelectingGroup && (
+                    <>
+                        <div className="fixed inset-0 z-[400]" onClick={() => setActiveWord(null)}></div>
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.9 }} 
+                            animate={{ opacity: 1, scale: 1, transform: 'translate(-50%, calc(-100% - 15px))'}} 
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="fixed z-[410] bg-[#fde8e9]  rounded-[1.5rem] p-4 shadow-2xl w-[220px] text-center"
+                            style={{ left: `${popoverPos.x}px`, top: `${popoverPos.y}px`, transform: 'translate(-50%, calc(-100% - 15px))' }}
+                        >
+                            <div className="relative flex justify-center items-center mb-1 text-[#460809]">
+                                <span className="text-2xl font-black">{activeWord.char || activeWord.text}</span>
+                                <button onClick={() => speakChinese(activeWord.char || activeWord.text)} className="absolute right-0 hover:scale-110 transition-transform">
+                                    <IoVolumeHighOutline size={18} />
+                                </button>
+                            </div>
+                            <p className="text-[10px] font-black text-[#aa232c]  tracking-widest mb-2">/ {activeWord.pinyin} /</p>
+                            
+                            <div className=" p-2 rounded-md mb-3">
+                                <p className="text-[11px] text-[#923335] font-medium italic">"{activeWord.vi || activeWord.mean}"</p>
+                            </div>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); setIsSelectingGroup(true); }}
+                                className="w-full bg-[#e7000b] text-white py-2 rounded-xl text-[10px] font-black uppercase shadow-sm hover:bg-[#c10007]"
+                            >
+                                + Lưu từ vựng
+                            </button>
+                            <div className="absolute left-1/2 -translate-x-1/2 bottom-[-8px] w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-[#fde8e9]"></div>
+                        </motion.div>
+                    </>
+                )}
+
+                {/* modal bộ từ */}
+                {isSelectingGroup && (
+                    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
+                            onClick={() => setIsSelectingGroup(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+                        
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white w-full max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl relative z-[510]"
+                        >
+                            {/* Header Modal */}
+                            <div className="bg-slate-50 p-6 border-b flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-blue-100 text-blue-600 p-2 rounded-xl"><IoFolderOpenOutline size={20}/></div>
+                                    <div>
+                                        <h3 className="font-black text-slate-800 text-sm uppercase">Lưu vào bộ từ</h3>
+                                        {/* <p className="text-[10px] text-slate-400 font-bold">Từ đang chọn: {activeWord?.char || activeWord?.text}</p> */}
+                                    </div>
+                                </div>
+                                <button onClick={() => setIsSelectingGroup(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                                    <IoCloseOutline size={24}/>
+                                </button>
+                            </div>
+
+                            <div className="p-6">
+                                {/* Tạo bộ từ mới */}
+                                <div className="flex gap-2 mb-6">
+                                    <input value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)}
+                                        placeholder="Tên bộ từ mới..." 
+                                        className="flex-1 bg-slate-100 border-none rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 ring-blue-500/20 font-medium" />
+                                    <button onClick={handleCreateGroup} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-blue-700 transition-all">TẠO</button>
+                                </div>
+
+                                {/* Danh sách bộ từ */}
+                                <div className="max-h-[200px] overflow-y-auto space-y-2 pr-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                                    {vocabGroups.length > 0 ? (
+                                        vocabGroups.map((g) => (
+                                            <button key={g.categoryID} onClick={() => saveWordToGroup(g.categoryID)}
+                                                className="w-full flex items-center justify-between p-4 rounded-2xl bg-slate-50 hover:bg-blue-50 border-2 border-transparent hover:border-blue-200 transition-all group"
+                                            >
+                                                <span className="font-bold text-slate-700 group-hover:text-blue-600">{g.categoryName}</span>
+                                                <IoAddCircleOutline size={20} className="text-slate-300 group-hover:text-blue-500"/>
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-10 text-slate-400 italic text-sm">Chưa có bộ từ nào. Hãy tạo bộ mới!</div>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
 };
 
 export default VideoLearning;

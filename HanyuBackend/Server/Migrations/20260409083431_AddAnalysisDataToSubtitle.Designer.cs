@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Server.Data;
 
@@ -11,9 +12,11 @@ using Server.Data;
 namespace Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260409083431_AddAnalysisDataToSubtitle")]
+    partial class AddAnalysisDataToSubtitle
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -82,11 +85,11 @@ namespace Server.Migrations
 
             modelBuilder.Entity("Server.Models.DailyProgress", b =>
                 {
-                    b.Property<int>("ProgressId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProgressId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("bit");
@@ -100,7 +103,7 @@ namespace Server.Migrations
                     b.Property<int>("UserID")
                         .HasColumnType("int");
 
-                    b.HasKey("ProgressId");
+                    b.HasKey("Id");
 
                     b.HasIndex("UserID", "StudyDate")
                         .IsUnique();
@@ -116,6 +119,9 @@ namespace Server.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SubId"));
 
+                    b.Property<string>("AnalysisData")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -123,17 +129,8 @@ namespace Server.Migrations
                     b.Property<double>("EndTime")
                         .HasColumnType("float");
 
-                    b.Property<string>("Pinyin")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<double>("StartTime")
                         .HasColumnType("float");
-
-                    b.Property<string>("Tokens")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Translation")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("VideoId")
                         .HasColumnType("int");

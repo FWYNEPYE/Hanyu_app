@@ -52,17 +52,40 @@ namespace Server.Controllers
             // await _context.SaveChangesAsync();}
 
                 // 3. Prompt AI
-                string prompt = $@"Return ONLY a JSON object for the Chinese word '{keyword}'. 
-                Strictly use this format: 
-                {{ 
-                ""hanzi"": ""{keyword}"", 
-                ""pinyin"": ""pinyin with tones"", 
-                ""meaning"": ""Vietnamese meaning"", 
-                ""type"": ""danh từ/động từ/tính từ/phó từ"", 
-                ""radical"": ""Bộ thủ"", 
-                ""grammar"": ""cách dùng"", 
-                ""examples"": [{{ ""zh"": ""câu ví dụ"", ""vi"": ""nghĩa ví dụ"" }}] 
-                }}";
+              string prompt = $@"
+                    Mày là một học giả Hán Nôm có kiến thức uyên thâm. 
+                    Hãy phân tích từ: '{keyword}' một cách chính xác tuyệt đối.
+
+                    YÊU CẦU NGHIÊM NGẶT:
+                    1. Xác định đúng từng chữ Hán trong từ '{keyword}'.
+                    2. Đối với mỗi chữ, hãy tra cứu trong bộ nhớ về 214 bộ thủ Khang Hy (Kangxi Radicals). 
+                    3. TUYỆT ĐỐI KHÔNG tự sáng tác ra các bộ thủ không có thật.
+                    4. Nếu một chữ có cấu trúc phức tạp, hãy tách thành: Bộ thủ chính + Thành phần còn lại.
+
+                    VÍ DỤ MẪU CHUẨN (HÃY LÀM THEO ĐÚNG LOGIC NÀY):
+                    - Nếu từ là '你好':
+                    radical: ""你: Bộ Nhân (亻) + chữ Nhĩ (尔)\n好: Bộ Nữ (女) + chữ Tử (子)""
+                    
+                    - Nếu từ là '休息':
+                    radical: ""休: Bộ Nhân (亻) + bộ Mộc (木)\n息: Bộ Tự (自) + bộ Tâm (心)""
+                   
+                    DỰA VÀO ĐÓ, HÃY PHÂN TÍCH TỪ '{keyword}':
+                    Trả về JSON duy nhất:
+                    {{
+
+                    ""hanzi"": ""{keyword}"",
+                    ""pinyin"": ""pinyin with tones"",
+                    ""meaning"": ""phân tích chi tiết nghĩa tiếng việt"",
+                    ""type"": ""danh từ/động từ/tính từ..."",
+                    ""radical"": ""(Phân tích từng chữ theo dòng giống ví dụ trên)"",
+                    ""grammar"": ""nếu là câu thì phân tích cấu trúc ngữ pháp, hoặc cách dùng đặc biệt, vị trí trong câu nếu là từ.Dựa vào các bộ thủ đã tách, hãy kể một câu chuyện ngắn gọn hoặc đưa ra logic hội ý thú vị để người học dễ nhớ chữ này nhất. Ví dụ: chữ 'An' (安) là mái nhà trên bộ Nữ, nghĩa là dưới mái nhà có người phụ nữ thì mới bình an."",
+                    ""examples"": [
+                        {{ ""zh"": ""câu ví dụ 1"", ""vi"": ""nghĩa ví dụ 1"" }},
+                        {{ ""zh"": ""câu ví dụ 2"", ""vi"": ""nghĩa ví dụ 2"" }}
+                    ]
+                    }}
+                    Dịch toàn bộ giải thích sang tiếng Việt chuẩn từ điển Hán - Việt.";
+
 
                 var aiRawResponse = await _aiService.GetFullAIResponse(prompt);
 

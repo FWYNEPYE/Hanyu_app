@@ -14,7 +14,7 @@ namespace Server.Data
         public DbSet<Category> Categories { get; set; }
         public DbSet<Video> Videos { get; set; }
         public DbSet<ChatHistory> ChatHistories { get; set; }
-
+        public DbSet<Subtitle> Subtitles { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

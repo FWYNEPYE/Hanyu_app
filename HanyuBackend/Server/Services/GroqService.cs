@@ -6,7 +6,7 @@ namespace Server.Services
 {
     public class GroqService
     {
-        private readonly string _apiKey = "apikeyma"; 
+        private readonly string _apiKey = "....."; 
         private readonly HttpClient _httpClient;
         private readonly string _url = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -25,7 +25,7 @@ namespace Server.Services
 
             var payload = new
             {
-                model = "llama-3.3-70b-versatile",
+                model = "llama-3.1-8b-instant",
                 messages = new[] {
                     // Trong GroqService hoặc GeminiService
                 new { 
@@ -69,7 +69,7 @@ namespace Server.Services
         {
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
             var payload = new {
-                model = "llama-3.3-70b-versatile",
+                model = "llama-3.1-8b-instant",
                 messages = new[] {
                     new { role = "system", content = "You are a professional Chinese-Vietnamese dictionary assistant. Respond only in JSON." },
                     new { role = "user", content = prompt }

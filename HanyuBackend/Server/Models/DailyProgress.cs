@@ -6,7 +6,7 @@ namespace Server.Models
     public class DailyProgress
     {
         [Key]
-        public int Id { get; set; }
+        public int ProgressId { get; set; }
 
         [Required]
         public int UserID { get; set; }
@@ -21,5 +21,6 @@ namespace Server.Models
        
         [ForeignKey("UserID")]
         public virtual User User { get; set; }
+        
     }
 }

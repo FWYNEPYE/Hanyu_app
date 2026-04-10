@@ -8,7 +8,7 @@ import {
 
 import HanziStroke from '../components/HanziStroke';
 import SaveWordModal from '../components/SaveWord';
-
+import VoiceSearch from '../components/VoiceSearch';
 const SearchPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearching, setIsSearching] = useState(false);
@@ -32,7 +32,15 @@ const SearchPage = () => {
     return user ? user.id : 7; 
   };
 
-  
+  const [history, setHistory] = useState([]);
+
+// Lấy lịch sử khi load trang
+useEffect(() => {
+  const savedHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+  setHistory(savedHistory);
+}, []);
+
+
 useEffect(() => {
   // Nếu trống thì dọn dẹp
   if (searchTerm.trim().length === 0) {
@@ -161,6 +169,7 @@ const handleOpenSaveModal = () => {
     const query = forcedTerm || searchTerm;
     if (!query) return;
 
+
     setSearchSuggestions([]); 
     skipNextSuggestion.current = true; 
     setIsSearching(true);
@@ -169,14 +178,26 @@ const handleOpenSaveModal = () => {
     //mới
     setIsSaved(false);
 
-    try {
-      const response = await axios.get(`http://localhost:5252/api/Dictionary/search`, {
-        params: { keyword: query, userId: getUserId() }
-      });
+   try {
+    const response = await axios.get(`http://localhost:5252/api/Dictionary/search`, {
+      params: { keyword: query, userId: getUserId() }
+    });
 
-      if(response.data) {
-      setResult(response.data);}
+    if(response.data) {
+      setResult(response.data);
 
+      // --- LƯU LỊCH SỬ TẠI ĐÂY ---
+      const history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+      const newEntry = {
+        hanzi: response.data.hanzi || query,
+        pinyin: response.data.pinyin || response.data.Pinyin || "...",
+        meaning: response.data.meaning || "..."
+      };
+      // Lọc trùng theo hanzi và chỉ giữ 5 từ
+      const updatedHistory = [newEntry, ...history.filter(h => h.hanzi !== newEntry.hanzi)].slice(0, 5);
+      localStorage.setItem('searchHistory', JSON.stringify(updatedHistory));
+      // --------------------------
+    }
       else{
         console.log("Đợi xíu...");
       }
@@ -194,7 +215,7 @@ const handleOpenSaveModal = () => {
     const updated = searchTerm + char;
     setSearchTerm(updated);
     clearCanvasOnly();
-    //handleSearch(null, updated); 
+    handleSearch(null, updated); 
   };
 
   const clearCanvasOnly = () => {
@@ -212,11 +233,11 @@ const handleOpenSaveModal = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 pb-10 space-y-8 animate-in fade-in duration-500">
+    <div className="max-w-6xl mx-auto px-4 pb-10 space-y-2 pt-0 animate-in fade-in duration-500">
       
       {/* ---  SEARCH BAR --- */}
       <div className="text-center space-y-4 pt-6">
-        <form onSubmit={handleSearch} className="relative max-w-3xl mx-auto mt-8 group">
+        <form onSubmit={handleSearch} className="relative max-w-3xl mx-auto mt-0 group">
           
           <div className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 transition-colors">
             <HiOutlineSearch size={24} />
@@ -262,9 +283,13 @@ const handleOpenSaveModal = () => {
             </div>
           )}
           <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 border-l pl-3 border-gray-100">
-            <button type="button" className="p-2 text-gray-400 hover:text-red-500 transition-colors">
-              <HiOutlineMicrophone size={22} />
-            </button>
+  
+            {/* Component Voice */}
+            <VoiceSearch 
+              onTranscript={(text) => setSearchTerm(text)} 
+              onSearch={(text) => handleSearch(null, text)} 
+            />
+
             <button 
               type="button" 
               onClick={() => {
@@ -295,23 +320,69 @@ const handleOpenSaveModal = () => {
               />
               <div className="px-6 py-3 bg-gray-50 flex justify-between">
                 <button type="button" onClick={clearCanvasOnly} className="text-xs font-black text-gray-400 hover:text-red-500 flex items-center gap-1 uppercase"><HiOutlineTrash /> Xóa</button>
-                <button type="button" onClick={() => {skipNextSuggestion.current = true; setShowHandwriting(false)}} className="text-xs font-black text-gray-400 hover:text-gray-700 uppercase">Đóng</button>
+                <button type="button" onClick={() => {skipNextSuggestion.current = true; setShowHandwriting(false);handleSearch(null, searchTerm);}} className="text-xs font-black text-gray-400 hover:text-gray-700 uppercase">Đóng</button>
               </div>
             </div>
           )}
         </form>
       </div>
+      {!result && !isSearching && (
+        <div className="mt-12 max-w-3xl mx-auto w-full animate-in fade-in slide-in-from-top-4 duration-700">
+          
+          {/* Hiển thị List nếu có lịch sử */}
+          {localStorage.getItem('searchHistory') && JSON.parse(localStorage.getItem('searchHistory')).length > 0 && (
+            <div className="bg-white/40 backdrop-blur-md rounded-[35px] border border-white/60 shadow-xl overflow-hidden mb-12">
+              <div className="px-8 py-4 border-b border-slate-100/50 flex justify-between items-center bg-white/20">
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Lịch sử</span>
+                <button 
+                  onClick={() => { localStorage.removeItem('searchHistory'); window.location.reload(); }}
+                  className="text-[10px] font-bold text-slate-300 hover:text-red-500 transition-colors uppercase"
+                >
+                  Dọn dẹp
+                </button>
+              </div>
+
+              <div className="divide-y divide-slate-100/50">
+                {JSON.parse(localStorage.getItem('searchHistory')).map((item, index) => (
+                  <div 
+                    key={index}
+                    onClick={() => {
+                      setSearchTerm(item.hanzi);
+                      handleSearch(null, item.hanzi);
+                    }}
+                    className="group px-8 py-5 flex items-center gap-6 hover:bg-white/60 cursor-pointer transition-all"
+                  >
+                    <div className="text-2xl font-black text-slate-800 group-hover:text-red-600 transition-colors min-w-[70px] text-left">
+                      {item.hanzi}
+                    </div>
+                    <div className="text-sm font-bold text-blue-500 font-mono min-w-[110px] text-left">
+                      [{item.pinyin}]
+                    </div>
+                    <div className="flex-1 text-sm text-slate-500 font-medium truncate group-hover:text-slate-800 transition-colors text-left">
+                      {item.meaning}
+                    </div>
+                    <div className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all text-red-400">
+                      <HiOutlineSearch size={18} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
+      )}
 
       {/* ---form kết quả --- */}
       {result && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-10">
           <div className="lg:col-span-4 space-y-5">
             <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-xl flex flex-col items-center justify-center min-h-[350px] overflow-hidden">
-                <h1 className="text-3xl font-black text-[#2d3436] mb-3 tracking-tight text-center break-words w-full">
+                <h1 className="text-2xl font-black text-[#2d3436] mb-3 tracking-tight text-center break-words w-full">
                   {result?.hanzi || searchTerm}
                 </h1>
 
-                <div className="text-lg font-bold text-gray-400 mb-10 text-center px-4">
+                <div className="text-sm font-bold text-gray-400 mb-10 text-center px-4">
                   {isSearching ? (
                     <span className="animate-pulse text-blue-400 font-medium">AI đang phân tích...</span>
                   ) : (
@@ -369,18 +440,30 @@ const handleOpenSaveModal = () => {
                 </button>
               </div>
               
-              <div className="flex flex-wrap gap-2 mb-4">
+             
+              <div className="flex flex-wrap gap-2 mb-2">
                 {result.type && (
                   <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-black uppercase">
                     {result.type}
                   </span>
                 )}
-                {result.radical && (
-                  <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-[10px] font-black uppercase">
-                    Bộ: {result.radical}
-                  </span>
-                )}
+                {/* Bạn có thể thêm các nhãn khác ở đây, chúng sẽ nằm cùng hàng với Type */}
               </div>
+
+              {/* Khối phân tích bộ thủ nằm riêng biệt ở dưới */}
+              {result.radical && (
+                <div 
+                  className="px-4 py-3 bg-purple-100 text-purple-700 rounded-lg text-[13px] font-medium leading-relaxed" 
+                  style={{ whiteSpace: 'pre-line' }}
+                >
+                  <strong className="block mb-1 text-[10px] font-black uppercase opacity-70">
+                    Phân tích bộ thủ:
+                  </strong>
+                  {result.radical}
+                </div>
+              )}
+        
+
               <h3 className="text-2xl font-black mb-3 text-[#2d3436]">{result.meaning}</h3>
               {/* <p className="text-gray-500 leading-relaxed text-base font-medium mb-6">"{result.definition || 'Đang cập nhật định nghĩa chi tiết...'}"</p> */}
               <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100/50">

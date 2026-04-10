@@ -183,11 +183,11 @@ const GameFlashcard = ({ data, onBack }) => {
       <div className="relative w-full max-w-[340px] md:max-w-[500px] aspect-[16/10] md:aspect-[21/9] mb-8 cursor-pointer group" onClick={() => setFlipped(!flipped)}>
           <div className={`relative w-full h-full transition-all duration-700 preserve-3d rounded-[40px] shadow-xl ${flipped ? 'rotate-y-180' : ''}`}>
             <div className="absolute inset-0 bg-[#E0E7FF] rounded-[40px] flex items-center justify-center backface-hidden border-[6px] border-white text-center">
-                <h3 className="text-5xl md:text-7xl font-black text-[#6366F1]">{currentCard?.hanzi}</h3>
+                <h3 className="text-3xl md:text-5xl font-black text-[#6366F1]">{currentCard?.hanzi}</h3>
             </div>
             <div className="absolute inset-0 bg-[#FDF2F8] border-[6px] border-white rounded-[40px] flex flex-col items-center justify-center rotate-y-180 backface-hidden p-6 text-center">
-               <span className="text-pink-400 font-black text-lg mb-2 italic tracking-widest">{currentCard?.pinyin}</span>
-               <h3 className="text-3xl md:text-4xl font-black text-[#BE185D] leading-tight">{currentCard?.meaning}</h3>
+               <span className="text-pink-400 font-black text-lg mb-2  tracking-widest">/{currentCard?.pinyin}/</span>
+               <h3 className="text-2xl md:text-3xl font-black text-[#BE185D] leading-tight">{currentCard?.meaning}</h3>
             </div>
           </div>
           <button onClick={(e) => { e.stopPropagation(); playAudio(currentCard?.hanzi); }} className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-blue-300 text-white p-3 rounded-full shadow-lg z-20 border-[4px] border-[#F9FAFF] hover:scale-110 active:scale-95 transition-all">
