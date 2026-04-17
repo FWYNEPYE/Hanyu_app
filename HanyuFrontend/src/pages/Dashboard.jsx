@@ -7,19 +7,26 @@ import {
   HiOutlineHome, HiOutlineMail, HiOutlineCalendar, HiOutlineRefresh
 } from "react-icons/hi";
 import { PiMedalLight } from "react-icons/pi";
+import CoinFly from '../components/CoinFly';
 
 const Dashboard = () => {
   const [open, setOpen] = useState(true);
   const [isNotiOpen, setIsNotiOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false); //đxuat
+
+  const [isShopOpen, setIsShopOpen] = useState(false);
+  const [showCoinFly, setShowCoinFly] = useState(false);
+
   const fileInputRef = useRef(null);
 
   const [user, setUser] = useState({
     name: "Đang tải...",
     email: "...",
     avatar: "https://ui-avatars.com/api/?name=U&background=fff&color=EF4444",
-    joinDate: "..."
+    joinDate: "...",
+    points: 0,           // Thêm dòng này
+    availableAIUsage: 0
   });
 
   const [tempName, setTempName] = useState("");
@@ -27,6 +34,11 @@ const Dashboard = () => {
   const location = useLocation();
   const currentPath = location.pathname;
 
+  const triggerCoinFly = () => {
+    setShowCoinFly(true);
+    // Sau 2.5 giây thì dọn dẹp để lần sau bấm lại nó vẫn hiện
+    setTimeout(() => setShowCoinFly(false), 2500);
+  };
 
 //connect
   const fetchUserData = async () => {
@@ -63,6 +75,68 @@ const Dashboard = () => {
       alert("Lỗi khi cập nhật tên!");
     }
   };
+
+//đổi đỉm
+const handleExchange = async (cost, amount) => {
+  try {
+    const token = localStorage.getItem("token");
+    
+    // Gửi đúng một object có 2 trường cost và amount
+    const response = await axios.post("http://localhost:5252/api/User/exchange-credits", 
+      { 
+        cost: Number(cost), 
+        amount: Number(amount) 
+      },
+      { 
+        headers: { Authorization: `Bearer ${token}` } 
+      }
+    );
+
+    if (response.status === 200) {
+      await fetchUserData(); // Load lại tiền trên Header
+      alert("Đổi thành công rồi nhé!");
+      setIsShopOpen(false);
+    }
+  } catch (err) {
+    // Đoạn này giúp mày nhìn thấy Backend đang chửi gì nè
+    console.error("Lỗi chi tiết:", err.response?.data);
+    alert(err.response?.data?.message || "Lỗi rồi mày ơi!");
+  }
+};
+
+
+const handleAddPoints = async (amount) => {
+    try {
+        const token = localStorage.getItem("token");
+        await axios.post("http://localhost:5252/api/User/add-points", 
+            { pointsToAdd: amount }, // Gửi đúng tên field là pointsToAdd
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        fetchUserData(); // Cập nhật lại Header ngay lập tức
+    } catch (err) {
+        console.error("Lỗi cộng điểm:", err.response?.data);
+    }
+};
+
+useEffect(() => {
+  // Hàm này sẽ được gọi khi CommunityPage bắn tín hiệu
+  const handleUpdatePoints = () => {
+    console.log("Phát hiện thay đổi điểm, đang tải lại dữ liệu...");
+    fetchUserData(); // Gọi lại API để lấy user profile mới nhất (có điểm mới)
+  };
+
+  // Lắng nghe cả event 'storage' (cho tab khác) và 'updatePoints' (cho tab hiện tại)
+  window.addEventListener("storage", handleUpdatePoints);
+  window.addEventListener("updatePoints", handleUpdatePoints);
+
+  return () => {
+    window.removeEventListener("storage", handleUpdatePoints);
+    window.removeEventListener("updatePoints", handleUpdatePoints);
+  };
+}, []);
+
+
 
   // ---  CẬP NHẬT AVATAR ---
   const handleAvatarChange = async (e) => {
@@ -115,6 +189,7 @@ const Dashboard = () => {
 
 
   return (
+    
     <div className="flex bg-[#f3f5f8] min-h-screen font-sans text-[#2d3436] relative antialiased">
       
       {/* ---  MODAL PROFILE  --- */}
@@ -244,7 +319,7 @@ const Dashboard = () => {
 
         <div className="mt-4 flex flex-col items-center shrink-0">
           <div className={`duration-500 bg-gray-50 rounded-2xl flex items-center justify-center shadow-sm overflow-hidden ${open ? "w-16 h-16" : "w-10 h-10 md:w-10"}`}>
-             <img src="/logoo.png" alt="logo" className="w-full h-full object-cover" />
+             <img src="/hehe.png" alt="logo" className="w-full h-full object-cover" />
           </div>
           <h2 className={`whitespace-pre duration-500 font-black mt-3 tracking-tighter ${!open && "md:opacity-0 md:translate-x-28"}`}>HANYU</h2>
         </div>
@@ -303,6 +378,29 @@ const Dashboard = () => {
           </button>
           <div className="hidden md:block"></div>
           <div className="flex items-center gap-4 sm:gap-8">
+
+            <div className="flex items-center gap-2 sm:gap-3">
+
+            {/* Point - 🪙 */}
+            <div className="flex items-center bg-amber-50 px-3 py-1.5 rounded-2xl border border-amber-100 shadow-sm">
+              <span className="text-sm mr-1.5">☀️</span>
+              <span className="text-[11px] font-black text-amber-700 uppercase tracking-tighter">
+                {user.points}
+              </span>
+            </div>
+
+            {/* AI Credits - ⚡ */}
+            <div className="flex items-center bg-blue-50 px-3 py-1.5 rounded-2xl border border-blue-100 shadow-sm relative group cursor-pointer" 
+                 onClick={() => setIsShopOpen(true)}>
+                <span className="text-sm mr-1.5">⚡</span>
+                <span className="text-[11px] font-black text-blue-700 uppercase">
+                  {user.availableAIUsage}
+                </span>
+                {/* Dấu cộng để báo hiệu là có thể mua thêm */}
+                <div className="ml-2 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-white text-[10px]">
+                  +
+                </div>
+              </div>
             <HiOutlineBell size={26} className="text-gray-400 cursor-pointer hover:text-red-500" onClick={() => setIsNotiOpen(true)} />
             
             {/* Click Profile */}
@@ -314,15 +412,71 @@ const Dashboard = () => {
                 <img src={user.avatar} alt="avatar" className="w-full h-full object-cover rounded-[14px]" />
               </div>
             </div>
+            </div>
           </div>
         </header>
 
         <main className={`flex-1 overflow-y-auto bg-[#f8fafc] ${isDashboardHome ? 'p-4 md:p-10' : 'p-0 md:p-10'}`}>
           <div className={`max-w-7xl mx-auto h-full ${(!isDashboardHome) ? 'pt-16 md:pt-0' : ''}`}>
-              <Outlet context={{ isNotiOpen, setIsNotiOpen }} />
+              <Outlet context={{ isNotiOpen, setIsNotiOpen, fetchUserData, triggerCoinFly }} />
           </div>
         </main>
+        {showCoinFly && <CoinFly />}
       </div>
+      {isShopOpen && (
+  <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsShopOpen(false)} />
+    <div className="relative w-full max-w-md bg-white rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="p-8">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-2xl font-black text-gray-800">HANYU SHOP 🛒</h3>
+          <button onClick={() => setIsShopOpen(false)} className="text-gray-400 hover:text-red-500"><HiX size={24}/></button>
+        </div>
+
+        <div className="bg-orange-50 p-4 rounded-3xl mb-6 flex items-center justify-between border border-orange-100" >
+          <span className="font-bold text-orange-700">Ví điểm của bạn:</span>
+          <span className="text-xl font-black text-orange-600">☀️ {user.points}</span>
+        </div>
+
+        <div className="space-y-4">
+          {/* Gói đổi 1 */}
+          <div className="group p-5 bg-white border-2 border-gray-100 rounded-[30px] hover:border-blue-500 transition-all cursor-pointer flex items-center justify-between"
+               onClick={() => handleExchange(50, 5)}>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl">⚡</div>
+              <div>
+                <p className="font-black text-gray-800">Gói Tiết Kiệm</p>
+                <p className="text-xs text-gray-400 font-bold">+5 lượt hỏi AI</p>
+              </div>
+            </div>
+            <button className="px-4 py-2 bg-gray-100 group-hover:bg-blue-500 group-hover:text-white rounded-2xl font-black text-xs transition-colors">
+              50 ☀️
+            </button>
+          </div>
+
+          {/* Gói đổi 2 */}
+          <div className="group p-5 bg-white border-2 border-gray-100 rounded-[30px] hover:border-blue-500 transition-all cursor-pointer flex items-center justify-between"
+               onClick={() => handleExchange(150, 20)}>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl">⚡⚡</div>
+              <div>
+                <p className="font-black text-gray-800">Gói Học Tập</p>
+                <p className="text-xs text-gray-400 font-bold">+20 lượt hỏi AI</p>
+              </div>
+            </div>
+            <button className="px-4 py-2 bg-gray-100 group-hover:bg-blue-500 group-hover:text-white rounded-2xl font-black text-xs transition-colors">
+              150 ☀️
+            </button>
+          </div>
+        </div>
+        
+        <p className="text-center text-[10px] text-gray-400 font-bold uppercase mt-6 tracking-widest">
+          Học càng nhiều, đổi càng phê!
+        </p>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };

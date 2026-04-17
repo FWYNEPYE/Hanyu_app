@@ -13,7 +13,21 @@ namespace Server.Models
         // "system" là từ điển chung, "user" là bộ từ cá nhân
         public string CategoryType { get; set; } = "system"; 
 
-        // Thêm cái này: Nếu null thì là của hệ thống, có ID thì là của User đó
+  
+        public bool IsPublic { get; set; } = false; // User cho phép chia sẻ bộ này
+        public int Price { get; set; } = 0; // Giá (point) 
+
+        public int Version { get; set; } = 1;
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+        public string? ParentCategoryID { get; set; } 
+
+        public string? Description { get; set; }
+
+        public string? IconName { get; set; } 
+        public string? ColorClass { get; set; }
+
+        public int LikesCount { get; set; } = 0;    
+        public string? Tags { get; set; } 
         public int? UserID { get; set; } 
 
         [ForeignKey("UserID")]

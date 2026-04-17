@@ -29,6 +29,12 @@ namespace Server.Models
         
         public DateTime? LastStudyDate { get; set; } // Ngày cuối cùng học đủ 10p
 
+        // --- CÁC TRƯỜNG MỚI ĐỂ MỞ RỘNG ---
+        public int Points { get; set; } = 0; // Dùng để đi chợ và dùng AI
+        public int TotalExp { get; set; } = 0; // Tổng kinh nghiệm tích lũy
+        public string? Rank { get; set; } = "Tân thủ"; // Danh hiệu
+        public int AvailableAIUsage { get; set; } = 5; // Số lượt dùng AI miễn phí trong ngày
+
        public string? AvatarUrl { get; set; }
         public virtual ICollection<DailyProgress> DailyProgresses { get; set; }
         public virtual ICollection<ChatHistory> ChatHistories { get; set; } = new List<ChatHistory>();

@@ -48,7 +48,7 @@ builder.Services.AddCors(options =>
                         .AllowAnyMethod()
                         .AllowAnyHeader());
 });
-
+builder.Services.AddRouting(options => options.LowercaseUrls = true);
 var app = builder.Build();
 
 
@@ -58,7 +58,7 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Hanyu API V1");
     c.RoutePrefix = "swagger"; 
 });
-
+app.UseRouting();
 app.UseCors("AllowAll");
 
 

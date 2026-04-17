@@ -72,7 +72,6 @@ const VideoLearning = () => {
         return id ? `https://i.ytimg.com/vi/${id}/mqdefault.jpg` : ""; 
     };
 
-    // --- API CALLS ---
     const fetchVideos = async () => {
         try {
             const res = await axios.get(BASE_URL);

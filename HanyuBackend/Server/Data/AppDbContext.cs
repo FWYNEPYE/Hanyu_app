@@ -1,3 +1,4 @@
+using System.Models;
 using Microsoft.EntityFrameworkCore;
 using Server.Models;
 
@@ -15,6 +16,12 @@ namespace Server.Data
         public DbSet<Video> Videos { get; set; }
         public DbSet<ChatHistory> ChatHistories { get; set; }
         public DbSet<Subtitle> Subtitles { get; set; }
+        public DbSet<Roadmap> Roadmaps { get; set; }
+        public DbSet<RoadmapStep> RoadmapSteps { get; set; }
+        public DbSet<UserProgress> UserProgresses { get; set; }
+        public DbSet<Exam> Exams { get; set; }
+        public DbSet<Question> Questions { get; set; }
+        public DbSet<UserCategory> UserCategories { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -30,6 +37,9 @@ namespace Server.Data
                 .WithMany(u => u.ChatHistories)
                 .HasForeignKey(c => c.UserID)
                 .OnDelete(DeleteBehavior.Cascade); 
+            
+            modelBuilder.Entity<UserCategory>()
+                .HasKey(uc => new { uc.UserID, uc.CategoryID });
         }
     }
 }

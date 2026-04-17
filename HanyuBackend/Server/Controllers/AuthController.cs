@@ -36,6 +36,8 @@ public class AuthController : ControllerBase
                 GoogleId = data.GoogleId,
                 CurrentStreak = 0,
                 LongestStreak = 0,
+                Points = 200,      // Mặc định 200 point
+                AvailableAIUsage = 10,
                 AvatarUrl = data.PhotoUrl,
                 CreatedAt = DateTime.Now,
                 PasswordHash = null//  để null vì dùng Google

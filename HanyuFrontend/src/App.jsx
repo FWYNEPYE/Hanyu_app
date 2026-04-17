@@ -13,6 +13,10 @@ import Game from './pages/Game';
 import LeaderboardPage from './pages/LeaderboardPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import VideoLearning from './pages/VideoLearning';
+import RoadmapDetail from './components/RoadmapDetail';
+import CommunityCard from './pages/CommunityCard';
+
+
 function AppContent() {
   const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
@@ -56,7 +60,7 @@ function AppContent() {
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<Dashboard />}>
             <Route index element={<DashboardHome />} />
-
+            
             <Route path="search" element={<SearchPage />} />
 
             <Route path="vocabulary" element={<Vocabulary />} />
@@ -66,7 +70,14 @@ function AppContent() {
             <Route path="video" element={<VideoLearning />} />
 
             <Route path="leaderboard" element={<LeaderboardPage />} />
+
+            <Route path="roadmap/:id" element={<RoadmapDetail />} />
+
+            <Route path="communitycard" element={<CommunityCard />} />
           </Route>
+          
+            {/* <Route path="/roadmap/:id" element={<RoadmapDetail />} /> */}
+
         </Route>
         
         <Route path="*" element={<Navigate to="/login" />} />

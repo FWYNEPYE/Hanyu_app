@@ -16,12 +16,12 @@ namespace Server.Controllers
             _context = context;
         }
 
-        // 1. Lấy toàn bộ từ vựng (Có kèm thông tin Category để hiển thị tên bộ từ)
+        // Lấy toàn bộ từ vựng 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Vocabulary>>> GetVocabularies()
         {
             return await _context.Vocabularies
-                .Include(v => v.Category) // Load thông tin từ bảng Cate sang luôn
+                .Include(v => v.Category) // Load thông tin từ bảng Cate
                 .ToListAsync();
         }
 
@@ -42,27 +42,23 @@ namespace Server.Controllers
 
             return Ok(result);
         }
-        // 3. Thêm từ vựng mới (Có kiểm tra CategoryID hợp lệ)
+     
+
         [HttpPost]
-        public async Task<ActionResult<Vocabulary>> PostVocabulary(Vocabulary vocabulary)
+        public async Task<ActionResult> PostVocabulary(Vocabulary voca) 
         {
-            // Kiểm tra xem CategoryID gửi lên có tồn tại trong bảng Cates chưa
-            var categoryExists = await _context.Categories.AnyAsync(c => c.CategoryID == vocabulary.CategoryID);
+            _context.Vocabularies.Add(voca);
             
-            if (!categoryExists)
-            {
-                return BadRequest(new { message = "Lỗi: CategoryID này không tồn tại trong hệ thống!" });
+            // Tìm bộ từ chủ quản và tăng Version
+            var category = await _context.Categories.FindAsync(voca.CategoryID);
+            if (category != null) {
+                category.Version += 1; // Mỗi lần thay đổi từ là tăng 1 đơn vị
+                category.UpdatedAt = DateTime.Now;
             }
-
-            // Gán ngày tạo nếu Model của mày có trường này
-            vocabulary.CreatedDate = DateTime.Now;
-
-            _context.Vocabularies.Add(vocabulary);
+            
             await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetVocabularies), new { id = vocabulary.VocaId }, vocabulary);
+            return Ok();
         }
-
 
         //xóa từ theo id
         [HttpDelete("{id}")]
@@ -81,6 +77,8 @@ namespace Server.Controllers
 
             return Ok(new { message = "Đã xóa từ vựng thành công!" });
         }
+
+
         [HttpPut("{id}")]
         public async Task<IActionResult> PutVocabulary(int id, Vocabulary vocabulary)
         {

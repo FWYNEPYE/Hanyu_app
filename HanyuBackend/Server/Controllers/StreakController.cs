@@ -13,34 +13,36 @@ namespace Server.Controllers
             public StreakController(AppDbContext context) => _context = context;
 
             [HttpPost("sync-time/{userId}")]
-            public async Task<IActionResult> SyncTime(int userId, [FromBody] int seconds)
-            {
-                var today = DateTime.Today;
-                // Lấy hoặc tạo bản ghi tiến độ hôm nay
-                var progress = await _context.DailyProgresses
-                    .FirstOrDefaultAsync(p => p.UserID == userId && p.StudyDate == today);
+public async Task<IActionResult> SyncTime(int userId, [FromBody] int seconds)
+{
+    var today = DateTime.Today;
+    var progress = await _context.DailyProgresses
+        .FirstOrDefaultAsync(p => p.UserID == userId && p.StudyDate == today);
 
-                if (progress == null) {
-                    progress = new DailyProgress { UserID = userId, StudyDate = today, TotalSeconds = 0 };
-                    _context.DailyProgresses.Add(progress);
-                }
+    if (progress == null) {
+        progress = new DailyProgress { UserID = userId, StudyDate = today, TotalSeconds = 0 };
+        _context.DailyProgresses.Add(progress);
+    }
 
-                // Cộng dồn giây
-                progress.TotalSeconds += seconds;
+    // Gán thẳng số giây từ client gửi lên (vì client đang đếm cộng dồn)
+    progress.TotalSeconds = seconds; 
 
-                //  Check mốc 10 phút (600s) để tăng Streak
-                if (progress.TotalSeconds >= 600 && !progress.IsCompleted) {
-                    progress.IsCompleted = true;
-                    var user = await _context.Users.FindAsync(userId);
-                    if (user != null) {
-                        // Nếu hôm qua có học thì Streak++, không thì reset về 1
-                        user.CurrentStreak = (user.LastStudyDate == today.AddDays(-1)) ? user.CurrentStreak + 1 : 1;
-                        user.LastStudyDate = today;
-                    }
-                }
-                await _context.SaveChangesAsync();
-                return Ok(new { total = progress.TotalSeconds, isDone = progress.IsCompleted });
+    if (progress.TotalSeconds >= 600 && !progress.IsCompleted) {
+        progress.IsCompleted = true;
+        var user = await _context.Users.FindAsync(userId);
+        if (user != null) {
+            // Check nếu hôm qua có học hoặc đây là ngày đầu tiên
+            if (user.LastStudyDate == today.AddDays(-1)) {
+                user.CurrentStreak += 1;
+            } else if (user.LastStudyDate != today) {
+                user.CurrentStreak = 1;
             }
+            user.LastStudyDate = today;
+        }
+    }
+    await _context.SaveChangesAsync();
+    return Ok(new { total = progress.TotalSeconds, isDone = progress.IsCompleted });
+}
 
             // API lấy số giây học của hôm nay
             [HttpGet("today-progress/{userId}")]

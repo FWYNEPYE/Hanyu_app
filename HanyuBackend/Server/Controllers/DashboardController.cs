@@ -17,39 +17,40 @@ namespace Server.Controllers
             _context = context;
         }
 
-        [HttpGet("stats")]
+                [HttpGet("stats")]
         public async Task<IActionResult> GetDashboardStats()
         {
-            // 1. Lấy UserID từ Token (giả sử bạn dùng JWT)
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null) return Unauthorized();
             int userId = int.Parse(userIdClaim.Value);
 
-            // 2. Lấy thông tin User (Streak, Avatar...)
+            // Lấy thông tin User 
             var user = await _context.Users
-                .Select(u => new { u.UserID, u.Username, u.CurrentStreak, u.LongestStreak })
+                .Select(u => new { 
+                    u.UserID, 
+                    u.Username, 
+                    u.CurrentStreak,
+                    u.Points,        
+                    u.Rank,         
+                    u.AvailableAIUsage 
+                })
                 .FirstOrDefaultAsync(u => u.UserID == userId);
 
-            if (user == null) return NotFound("User không tồn tại.");
+            if (user == null) return NotFound();
 
-            // 3. Thống kê tổng số từ vựng trong các Category của User này
-            var totalVocab = await _context.Vocabularies
-                .CountAsync(v => _context.Categories
-                    .Where(c => c.UserID == userId)
-                    .Select(c => c.CategoryID)
-                    .Contains(v.CategoryID));
+            // 2. Tính toán tổng số từ vựng (cho ô "Tiến độ hiện tại" 65% của mày)
+            
+            var totalVocab = await _context.Vocabularies.CountAsync(); 
 
-            // 4. Lấy dữ liệu tiến độ 7 ngày gần nhất để vẽ biểu đồ
+            //  Lấy dữ liệu biểu đồ
             var last7Days = Enumerable.Range(0, 7)
                 .Select(i => DateTime.Today.AddDays(-i))
-                .OrderBy(d => d)
-                .ToList();
+                .OrderBy(d => d).ToList();
 
             var progressData = await _context.DailyProgresses
                 .Where(p => p.UserID == userId && p.StudyDate >= DateTime.Today.AddDays(-7))
                 .ToListAsync();
 
-            // Kết hợp dữ liệu 
             var chartData = last7Days.Select(date => new
             {
                 Date = date.ToString("dd/MM"),
@@ -57,13 +58,60 @@ namespace Server.Controllers
                 IsCompleted = progressData.FirstOrDefault(p => p.StudyDate.Date == date.Date)?.IsCompleted ?? false
             });
 
-            return Ok(new
-            {
-                UserStats = user,
-                TotalVocabulary = totalVocab,
-                ActivityChart = chartData
+            return Ok(new { 
+                UserStats = user, 
+                ActivityChart = chartData,
+                TotalVocabulary = totalVocab // Trả về số thực tế
             });
         }
-    }
-}
 
+        [HttpPost("update-progress")]
+public async Task<IActionResult> UpdateProgress([FromBody] ProgressUpdateDto dto)
+{
+    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+    if (userIdClaim == null) return Unauthorized();
+    int userId = int.Parse(userIdClaim.Value);
+
+    var today = DateTime.Today;
+    var progress = await _context.DailyProgresses
+        .FirstOrDefaultAsync(p => p.UserID == userId && p.StudyDate == today);
+
+    if (progress == null) {
+        progress = new DailyProgress { 
+            UserID = userId, StudyDate = today, TotalSeconds = dto.Seconds,
+            IsCompleted = dto.Seconds >= 600 
+        };
+        _context.DailyProgresses.Add(progress);
+    } else {
+        if (dto.Seconds > progress.TotalSeconds) progress.TotalSeconds = dto.Seconds;
+        if (progress.TotalSeconds >= 600) progress.IsCompleted = true;
+    }
+
+    // Tách logic Streak ra riêng, không phụ thuộc vào việc progress.IsCompleted vừa mới đổi
+   
+    if (progress.TotalSeconds >= 600) 
+    {
+        var user = await _context.Users.FindAsync(userId);
+        if (user != null && user.LastStudyDate?.Date != today.Date) 
+        {
+            var yesterday = today.AddDays(-1).Date;
+            if (user.LastStudyDate?.Date == yesterday) {
+                user.CurrentStreak += 1;
+            } else {
+                user.CurrentStreak = 1;
+            }
+
+            user.Points += 10; 
+
+            user.LastStudyDate = today;
+            _context.Entry(user).State = EntityState.Modified;
+        }
+    }
+
+    await _context.SaveChangesAsync();
+    return Ok(new { success = true, currentStreak = (await _context.Users.FindAsync(userId))?.CurrentStreak });
+}
+    }
+
+    public class ProgressUpdateDto { public int Seconds { get; set; } }
+}

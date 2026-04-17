@@ -22,11 +22,12 @@ namespace Server.Models
         
         public int Level { get; set; } 
         public string CategoryID { get; set; } = string.Empty; 
+        public int AddedInVersion { get; set; } = 1;
 
         [ForeignKey("CategoryID")]
         public virtual Category? Category { get; set; }
         public DateTime CreatedDate { get; set; } = DateTime.Now;
-
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
         
     }
 }

@@ -50,7 +50,9 @@ namespace Server.Controllers
                     email = user.Email,
                     avatar = finalAvatar,
                     joinDate = user.CreatedAt.ToString("dd/MM/yyyy"),
-                    streak = user.CurrentStreak
+                    streak = user.CurrentStreak,
+                    points = user.Points, 
+                    availableAIUsage = user.AvailableAIUsage
                 });
             }
             catch (Exception ex)
@@ -118,6 +120,73 @@ namespace Server.Controllers
                 return StatusCode(500, new { message = "Lỗi server khi upload!", error = ex.Message });
             }
         }
+       
+       
+
+       [HttpPost("add-points")]
+public async Task<IActionResult> AddPoints([FromBody] AddPointsDto data) // Dùng class DTO ở đây
+{
+    try
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return NotFound(new { message = "Không tìm thấy User!" });
+
+        // Cộng điểm từ data.PointsToAdd
+        user.Points += data.PointsToAdd;
+        
+        await _context.SaveChangesAsync();
+
+        return Ok(new { 
+            message = $"Đã cộng {data.PointsToAdd} điểm!", 
+            currentPoints = user.Points 
+        });
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, new { message = "Lỗi khi cộng điểm!", error = ex.Message });
+    }
+}
+
+
+
+[HttpPost("exchange-credits")]
+public async Task<IActionResult> ExchangeCredits([FromBody] ExchangeDto data)
+{
+    try 
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return NotFound(new { message = "User không tồn tại" });
+
+        // Kiểm tra xem data có bị null không (nếu lỗi map dữ liệu)
+        if (data == null) return BadRequest(new { message = "Dữ liệu gửi lên không hợp lệ" });
+
+        if (user.Points < data.Cost) 
+        {
+            return BadRequest(new { message = "Mày chưa đủ điểm, học tiếp đi!" });
+        }
+
+        // Thực hiện trừ điểm và cộng lượt
+        user.Points -= data.Cost;
+        user.AvailableAIUsage += data.Amount;
+
+        await _context.SaveChangesAsync();
+        
+        return Ok(new { 
+            message = "Đổi quà thành công!", 
+            points = user.Points, 
+            credits = user.AvailableAIUsage 
+        });
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, new { message = "Lỗi server!", error = ex.Message });
+    }
+}
+
+
+
+
+public class ExchangeDto { public int Cost { get; set; } public int Amount { get; set; } }
 
         // Hàm phụ để lấy User
         private async Task<User?> GetCurrentUserAsync()
@@ -138,4 +207,9 @@ namespace Server.Controllers
     {
         public string NewName { get; set; } = string.Empty;
     }
+
+
+    public class AddPointsDto { public int PointsToAdd { get; set; } }
+
+
 }
