@@ -34,10 +34,15 @@ namespace Server.Models
         public int TotalExp { get; set; } = 0; // Tổng kinh nghiệm tích lũy
         public string? Rank { get; set; } = "Tân thủ"; // Danh hiệu
         public int AvailableAIUsage { get; set; } = 5; // Số lượt dùng AI miễn phí trong ngày
-
+        public string Role { get; set; } = "user";
+        public bool IsActive { get; set; } = true;
        public string? AvatarUrl { get; set; }
+       public bool IsLocked { get; set; } = false;
         public virtual ICollection<DailyProgress> DailyProgresses { get; set; }
         public virtual ICollection<ChatHistory> ChatHistories { get; set; } = new List<ChatHistory>();
         public virtual ICollection<Category> Categories { get; set; } = new List<Category>();
+        public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+
+
     }
 }

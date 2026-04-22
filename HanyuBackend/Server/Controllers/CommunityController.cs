@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Server.Data; // Chỉnh lại theo AppDbContext của sếp
+using Server.Data;
 using Server.Models;
 
 namespace Server.Controllers
@@ -56,138 +56,56 @@ namespace Server.Controllers
 
 
         // Preview 5 từ 
-        [HttpGet("preview/{id}")]
-        public async Task<IActionResult> GetPreview(string id)
-        {
-            var data = await _context.Vocabularies
-                .Where(v => v.CategoryID == id)
-                .Take(5)
-                .ToListAsync();
-            return Ok(data);
-        }
+[HttpGet("preview/{id}")]
+public async Task<IActionResult> GetPreview(string id, [FromQuery] int userId)
+{
+    var allWords = await _context.Vocabularies.Where(v => v.CategoryID == id).ToListAsync();
+
+    var isOwned = await _context.UserCategories.AnyAsync(uc => uc.UserID == userId && uc.CategoryID == id);
+
+    var result = allWords.Select((v, index) => new {
+        v.Hanzi, v.Pinyin, v.Meaning, v.Type, v.Example, v.ExampleMeaning, v.Note,
+        IsLocked = !isOwned && index >= 4  // Nếu có vé thì IsLocked luôn là false
+    });
+    return Ok(result);
+}
 
 
-        [HttpPost("redeem")]
-        public async Task<IActionResult> Redeem([FromBody] RedeemReq req)
-        {
-            using var transaction = await _context.Database.BeginTransactionAsync();
-
-            try
-            {
-                //lấy bộ gốc
-                var original = await _context.Categories
-                    .Include(c => c.Vocabularies)
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(c => c.CategoryID == req.DeckId);
-
-                var user = await _context.Users.FindAsync(req.UserId);
-
-                if (original == null || user == null)
-                    return NotFound(new { msg = "Không tìm thấy bộ từ vựng hoặc người dùng!" });
-
-                //  Tìm bản copy hiện tại của User 
-                var myCopy = await _context.Categories
-                    .Include(c => c.Vocabularies)
-                    .FirstOrDefaultAsync(c => c.UserID == req.UserId && c.ParentCategoryID == original.CategoryID);
 
 
-                // --- TH CẬP NHẬT BỘ TỪ ĐÃ CÓ ---
-                if (myCopy != null) {
-                    await _context.Entry(myCopy).Collection(c => c.Vocabularies).Query().LoadAsync();
-                    var myHanziList = myCopy.Vocabularies.Select(v => v.Hanzi.Trim().ToLower()).ToHashSet();
+[HttpPost("redeem")]
+public async Task<IActionResult> RedeemDeck([FromBody] RedeemReq req)
+{
+    var user = await _context.Users.FindAsync(req.UserId);
+    var communityDeck = await _context.Categories.Include(c => c.Vocabularies).FirstOrDefaultAsync(c => c.CategoryID == req.DeckId);
 
-                    // Lọc từ mới
-                    var newWords = original.Vocabularies
-                        .Where(v => !myHanziList.Contains(v.Hanzi.Trim().ToLower()))
-                        .ToList();
+    if (user == null || communityDeck == null) return NotFound();
 
-                    // CẬP NHẬT VERSION KHI CÓ TỪ MỚI HOẶC KHI USER BẤM CẬP NHẬT
-                    if (newWords.Count == 0) {return BadRequest(new { msg = "Không có từ mới nào để cập nhật!" }); }
+    int price = CalculateAutoPrice(communityDeck.Vocabularies.Count);
+    if (user.Points < price) return BadRequest(new { message = "Không đủ điểm!" });
 
-                        // Tính phí nạp thêm: 2 Point/từ
-                    int updatePrice = newWords.Count * 2;
-                    if (user.Points < updatePrice)
-                        return BadRequest(new { msg = $"Cần {updatePrice} Point để nạp thêm {newWords.Count} từ!" });
+    // Kiểm tra 
+    var hasTicket = await _context.UserCategories
+        .AnyAsync(uc => uc.UserID == req.UserId && uc.CategoryID == req.DeckId);
+    
+    if (hasTicket) return BadRequest(new { message = "Đã mua vé bộ này rồi!" });
 
-                    user.Points -= updatePrice;
+    //  Trừ điểm
+    user.Points -= price;
 
-                        // Thêm từ mới vào kho của User
-                    foreach (var v in newWords)
-                        {
-                            _context.Vocabularies.Add(new Vocabulary
-                            {
-                                CategoryID = myCopy.CategoryID,
-                                Hanzi = v.Hanzi.Trim(),
-                                Pinyin = v.Pinyin,
-                                Meaning = v.Meaning,
-                                Type = v.Type,
-                                Example = v.Example,
-                                ExampleMeaning = v.ExampleMeaning
-                            });
-                        }
+    //Lưu vào bảng trung gian
+    _context.UserCategories.Add(new UserCategory {
+        UserID = req.UserId,
+        CategoryID = req.DeckId,
+        PurchasedAt = DateTime.Now,
+        SavedVersion = communityDeck.Version // Lưu lại để sau này biết có update hay không
+    });
 
-                    myCopy.Version = original.Version; // Chỉ gán khi đã nạp xong từ
-                    await _context.SaveChangesAsync();
-                    }
-                            // --- TH MUA MỚI  ---
-                     else
-                        {
-                            int fullPrice = CalculateAutoPrice(original.Vocabularies.Count);
-                            if (user.Points < fullPrice)
-                                return BadRequest(new { msg = $"Bạn cần {fullPrice} Point để mua bộ từ này!" });
+    await _context.SaveChangesAsync();
+    return Ok(new { newPoints = user.Points, message = "Mở khóa thành công!" });
+}
 
-                            user.Points -= fullPrice;
 
-                            var newCopyId = Guid.NewGuid().ToString().Substring(0, 8);
-                            var newCopy = new Category
-                                {
-                                    CategoryID = newCopyId,
-                                    CategoryName = original.CategoryName,
-                                    CategoryType = "user",
-                                    UserID = user.UserID,
-                                    ParentCategoryID = original.CategoryID,
-                                    Version = original.Version,
-                                    Description = original.Description,
-                                    IconName = original.IconName,
-                                    ColorClass = original.ColorClass,
-                                    Tags = original.Tags,
-                                    IsPublic = false
-                                };
-
-                            _context.Categories.Add(newCopy);
-
-                                // Copy toàn bộ từ vựng
-                            foreach (var v in original.Vocabularies)
-                                {
-                                    _context.Vocabularies.Add(new Vocabulary
-                                    {
-                                        CategoryID = newCopyId,
-                                        Hanzi = v.Hanzi.Trim(),
-                                        Pinyin = v.Pinyin,
-                                        Meaning = v.Meaning,
-                                        Type = v.Type,
-                                        Example = v.Example,
-                                        ExampleMeaning = v.ExampleMeaning
-                                    });
-                                }
-                        }
-
-                        await _context.SaveChangesAsync();
-                        await transaction.CommitAsync();
-
-                        return Ok(new 
-                        { 
-                            msg = myCopy != null ? "Cập nhật thành công!" : "Mua bộ từ thành công!", 
-                            newPoints = user.Points,
-                            newVersion = original.Version 
-                        });
-            }
-            catch (Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    return StatusCode(500, new { msg = "Lỗi xử lý: " + ex.Message });
-                }
-        }
 
 
 
@@ -231,13 +149,13 @@ namespace Server.Controllers
                     price = 15; 
                 }
                 else if (wordCount <= 50) {
-                    price = wordCount * 0.6; 
+                    price = 15 + (wordCount - 20) * 0.5;
                 }
                 else if (wordCount <= 100) {
-                    price = wordCount * 0.5; 
+                    price = 30 + (wordCount - 50) * 0.4;
                 }
                 else {
-                    price = wordCount * 0.4; 
+                    price = 100;
                 }
 
                 return (int)Math.Round(price);

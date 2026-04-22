@@ -1,4 +1,3 @@
-using System.Models;
 using Microsoft.EntityFrameworkCore;
 using Server.Models;
 
@@ -22,6 +21,16 @@ namespace Server.Data
         public DbSet<Exam> Exams { get; set; }
         public DbSet<Question> Questions { get; set; }
         public DbSet<UserCategory> UserCategories { get; set; }
+        public DbSet<UserVocaProgress> UserVocaProgresses { get; set; }
+        public DbSet<SentencePuzzle> SentencePuzzles { get; set; }
+        public DbSet<Message> Messages { get; set; }
+        public DbSet<UserPuzzleCompletion> UserPuzzleCompletions { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<UserTask> UserTasks { get; set; }
+        public DbSet<Minigame> Minigames {get; set;}
+        public DbSet<GameLog> GameLogs {get; set;}
+        public DbSet<SystemSetting> SystemSettings { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -40,6 +49,12 @@ namespace Server.Data
             
             modelBuilder.Entity<UserCategory>()
                 .HasKey(uc => new { uc.UserID, uc.CategoryID });
+
+            modelBuilder.Entity<RoadmapStep>()
+                .HasOne(s => s.Exam)
+                .WithMany() 
+                .HasForeignKey(s => s.ExamId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

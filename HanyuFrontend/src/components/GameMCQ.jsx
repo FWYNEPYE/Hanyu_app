@@ -5,7 +5,7 @@ import {
 } from "react-icons/hi";
 import { useNavigate } from 'react-router-dom';
 
-const GameMCQ = ({ data, onBack }) => { // Nhận data từ Game.jsx
+const GameMCQ = ({ data, onBack, allVocabs = [] }) => { // Nhận data từ Game.jsx
   const [currentIdx, setCurrentIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(15);
@@ -57,60 +57,80 @@ const GameMCQ = ({ data, onBack }) => { // Nhận data từ Game.jsx
   };
 
   // --- 3. LOGIC TẠO CÂU HỎI TỪ DATA THẬT ---
-  const initGame = useCallback(() => {
-    if (!data || data.length === 0) return;
-
-    try {
-      setIsLoading(true);
-      
-      // Chuyển đổi data từ SQL thành định dạng câu hỏi trắc nghiệm
-      const formattedQuestions = data.map((item) => {
-        // Lấy ngẫu nhiên 3 đáp án khác
-        const distractors = data
-          .filter(d => d.id !== item.id) // Không lấy chính nó làm đáp án sai
-          .sort(() => 0.5 - Math.random())
-          .slice(0, 3)
-          .map(d => d.meaning);
-
-        // Trộn đáp án đúng với đáp án sai
-        const options = [...distractors, item.meaning].sort(() => 0.5 - Math.random());
-
-        return {
-          id: item.id,
-          word: item.hanzi,
-          pinyin: item.pinyin,
-          correct: item.meaning,
-          options: options
-        };
-      });
-
-      setQuestions(formattedQuestions);
-      setCurrentIdx(0);
-      setScore(0);
-      setTimeLeft(15);
-      setIsGameOver(false);
-      setShowModal(null);
-      setSelectedAnswer(null);
-    } catch (err) {
-      console.error("Lỗi xử lý câu hỏi:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [data]);
-
+ // --- 3. LOGIC TẠO CÂU HỎI TỔNG LỰC (ĐÃ FIX LAG & ĐÁP ÁN PHỤ) ---
   useEffect(() => {
-    initGame();
-  }, [initGame]);
+    // Nếu chưa có data hoặc đã trộn xong rồi thì không làm gì cả
+    if (!data || data.length === 0 || questions.length > 0) return;
 
-  // --- 4. TIMER LOGIC ---
-  useEffect(() => {
-    if (timeLeft > 0 && !isGameOver && !showModal && !isLoading) {
-      const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-      return () => clearInterval(timer);
-    } else if (timeLeft === 0 && !isGameOver) {
-      setIsGameOver(true);
-    }
-  }, [timeLeft, isGameOver, showModal, isLoading]);
+    const generateQuestions = () => {
+      try {
+        // Lấy nguồn từ pool tổng để làm đáp án nhiễu
+        const pool = (allVocabs && allVocabs.length > 0) ? allVocabs : data;
+
+        const formatted = data.map((item) => {
+          // Bắt đúng tên biến từ Model C# (VocaId, Meaning...)
+          const currentId = item.vocaId || item.VocaId;
+          const currentMeaning = item.meaning || item.Meaning;
+
+          // Lọc danh sách đáp án sai
+          let distractors = pool
+            .filter(d => (d.vocaId || d.VocaId) !== currentId)
+            .map(d => d.meaning || d.Meaning)
+            .filter(m => m && m !== currentMeaning);
+
+          // Xóa trùng lặp
+          distractors = [...new Set(distractors)];
+
+          // Trộn và lấy 3 từ sai
+          let shuffledDistractors = distractors
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 3);
+
+          // Chống cháy nếu bộ từ quá ít: Dùng mảng từ thông dụng thay vì "Đáp án phụ"
+          const backup = ["Học tập", "Sức khỏe", "Thành công", "Vui vẻ", "Gia đình"];
+          let bIdx = 0;
+          while (shuffledDistractors.length < 3) {
+            const word = backup[bIdx] || `Lựa chọn ${shuffledDistractors.length + 1}`;
+            if (!shuffledDistractors.includes(word) && word !== currentMeaning) {
+              shuffledDistractors.push(word);
+            }
+            bIdx++;
+          }
+
+          // Gộp đáp án đúng và trộn lần cuối
+          const options = [...shuffledDistractors, currentMeaning].sort(() => 0.5 - Math.random());
+
+          return {
+            id: currentId,
+            word: item.hanzi || item.Hanzi,
+            pinyin: item.pinyin || item.Pinyin,
+            correct: currentMeaning,
+            options: options
+          };
+        });
+
+        setQuestions(formatted);
+        setIsLoading(false); // Tắt loading cực nhanh
+      } catch (err) {
+        console.error("Lỗi trộn game:", err);
+        setIsLoading(false);
+      }
+    };
+
+    generateQuestions();
+  }, [data, allVocabs, questions.length]); 
+
+  // Hàm initGame này giờ chỉ dùng để reset game khi nhấn "Chơi lại"
+  const initGame = () => {
+    setQuestions([]);
+    setIsLoading(true);
+    setCurrentIdx(0);
+    setScore(0);
+    setTimeLeft(15);
+    setIsGameOver(false);
+    setShowModal(null);
+    setSelectedAnswer(null);
+  };
 
   const handleAnswer = (choice) => {
     if (selectedAnswer || isGameOver) return; 

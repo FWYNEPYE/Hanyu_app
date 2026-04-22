@@ -54,7 +54,6 @@ useEffect(() => {
 
   const fetchSuggestions = async () => {
  
-    //if (showHandwriting || skipNextSuggestion.current || isLongQuery) {
     if (showHandwriting || skipNextSuggestion.current){
       setSearchSuggestions([]);
       return;
@@ -83,12 +82,11 @@ useEffect(() => {
       skipNextSuggestion.current = false;
     }, 2500);
   } else {
-    // TRÊN MÁY TÍNH: Nhả chốt chậm hơn 1 chút để "đón đầu" cái suggestionTimeout
     if (skipNextSuggestion.current) {
       const releaseLock = setTimeout(() => {
         skipNextSuggestion.current = false;
         setSearchSuggestions([]); // Ép xóa 
-      }, 500); // Đợi 500ms để đảm bảo cái fetchSuggestions ở trên đã bị hủy 
+      }, 500); 
       return () => {
         clearTimeout(suggestionTimeout);
         clearTimeout(releaseLock);
@@ -145,20 +143,7 @@ useEffect(() => {
   };
 
 
-// const handleSaveToCollection = async () => {
-//     if (!result) return;
-//     setIsSaving(true);
-//     try {
-//         await axios.post(`http://localhost:5252/api/Dictionary/add-to-collection?userId=${getUserId()}`, result);
-//         setIsSaved(true);
-//         alert("Đã lưu vào bộ từ!");
-//     } catch (error) {
-//         console.error(error);
-//         alert(error.response?.data || "Lỗi khi lưu");
-//     } finally {
-//         setIsSaving(false);
-//     }
-// };
+
 const handleOpenSaveModal = () => {
     if (!result) return;
     setIsModalOpen(true);
@@ -193,10 +178,9 @@ const handleOpenSaveModal = () => {
         pinyin: response.data.pinyin || response.data.Pinyin || "...",
         meaning: response.data.meaning || "..."
       };
-      // Lọc trùng theo hanzi và chỉ giữ 5 từ
       const updatedHistory = [newEntry, ...history.filter(h => h.hanzi !== newEntry.hanzi)].slice(0, 5);
       localStorage.setItem('searchHistory', JSON.stringify(updatedHistory));
-      // --------------------------
+
     }
       else{
         console.log("Đợi xíu...");
@@ -247,7 +231,7 @@ const handleOpenSaveModal = () => {
             type="text" 
             value={searchTerm}
              onChange={(e) => {
-              skipNextSuggestion.current = false; // Khi người dùng gõ phím -> gợi ý
+              skipNextSuggestion.current = false; 
               setSearchTerm(e.target.value);
             }}
             placeholder="Nhập Hán tự, Pinyin..."
@@ -492,12 +476,12 @@ const handleOpenSaveModal = () => {
         </div>
       )}
       <SaveWordModal 
-    isOpen={isModalOpen} 
-    onClose={() => setIsModalOpen(false)}
-    wordData={result}
-    userId={getUserId()}
-    onSaved={() => setIsSaved(true)} 
-/>
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)}
+          wordData={result}
+          userId={getUserId()}
+          onSaved={() => setIsSaved(true)} 
+      />
     </div>
   );
   

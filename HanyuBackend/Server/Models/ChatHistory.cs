@@ -16,6 +16,7 @@ namespace Server.Models
         public virtual User User { get; set; } = null!; 
 
         public string Role { get; set; } = string.Empty; 
+        public string SessionID { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
         public string? Pinyin { get; set; }
         public string? Translation { get; set; }

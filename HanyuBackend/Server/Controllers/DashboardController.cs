@@ -61,56 +61,168 @@ namespace Server.Controllers
             return Ok(new { 
                 UserStats = user, 
                 ActivityChart = chartData,
-                TotalVocabulary = totalVocab // Trả về số thực tế
+                TotalVocabulary = totalVocab 
             });
         }
 
         [HttpPost("update-progress")]
-public async Task<IActionResult> UpdateProgress([FromBody] ProgressUpdateDto dto)
-{
-    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-    if (userIdClaim == null) return Unauthorized();
-    int userId = int.Parse(userIdClaim.Value);
-
-    var today = DateTime.Today;
-    var progress = await _context.DailyProgresses
-        .FirstOrDefaultAsync(p => p.UserID == userId && p.StudyDate == today);
-
-    if (progress == null) {
-        progress = new DailyProgress { 
-            UserID = userId, StudyDate = today, TotalSeconds = dto.Seconds,
-            IsCompleted = dto.Seconds >= 600 
-        };
-        _context.DailyProgresses.Add(progress);
-    } else {
-        if (dto.Seconds > progress.TotalSeconds) progress.TotalSeconds = dto.Seconds;
-        if (progress.TotalSeconds >= 600) progress.IsCompleted = true;
-    }
-
-    // Tách logic Streak ra riêng, không phụ thuộc vào việc progress.IsCompleted vừa mới đổi
-   
-    if (progress.TotalSeconds >= 600) 
-    {
-        var user = await _context.Users.FindAsync(userId);
-        if (user != null && user.LastStudyDate?.Date != today.Date) 
+        public async Task<IActionResult> UpdateProgress([FromBody] ProgressUpdateDto dto)
         {
-            var yesterday = today.AddDays(-1).Date;
-            if (user.LastStudyDate?.Date == yesterday) {
-                user.CurrentStreak += 1;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized();
+            int userId = int.Parse(userIdClaim.Value);
+
+            var today = DateTime.Today;
+            var progress = await _context.DailyProgresses
+                .FirstOrDefaultAsync(p => p.UserID == userId && p.StudyDate == today);
+
+            if (progress == null) {
+                progress = new DailyProgress { 
+                    UserID = userId, StudyDate = today, TotalSeconds = dto.Seconds,
+                    IsCompleted = dto.Seconds >= 600 
+                };
+                _context.DailyProgresses.Add(progress);
             } else {
-                user.CurrentStreak = 1;
+                if (dto.Seconds > progress.TotalSeconds) progress.TotalSeconds = dto.Seconds;
+                if (progress.TotalSeconds >= 600) progress.IsCompleted = true;
             }
 
-            user.Points += 10; 
+        
+            if (progress.TotalSeconds >= 600) 
+            {
+                var user = await _context.Users.FindAsync(userId);
+                if (user != null && user.LastStudyDate?.Date != today.Date) 
+                {
+                    var yesterday = today.AddDays(-1).Date;
+                    if (user.LastStudyDate?.Date == yesterday) {
+                        user.CurrentStreak += 1;
+                    } else {
+                        user.CurrentStreak = 1;
+                    }
 
-            user.LastStudyDate = today;
-            _context.Entry(user).State = EntityState.Modified;
+                    user.Points += 10; 
+
+                    user.LastStudyDate = today;
+                    _context.Entry(user).State = EntityState.Modified;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true, currentStreak = (await _context.Users.FindAsync(userId))?.CurrentStreak });
         }
-    }
 
-    await _context.SaveChangesAsync();
-    return Ok(new { success = true, currentStreak = (await _context.Users.FindAsync(userId))?.CurrentStreak });
-}
+        private async Task<User?> GetCurrentUserAsync()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return null;
+            return await _context.Users.FindAsync(int.Parse(userIdClaim.Value));
+        }
+
+
+        [HttpGet("daily-tasks")]
+        public async Task<IActionResult> GetDailyTasks()
+        {
+            try
+            {
+                var user = await GetCurrentUserAsync(); // Hàm lấy User
+                if (user == null) return Unauthorized();
+
+                var today = DateTime.Today;
+
+                // 1. Lấy danh sách task của hôm nay
+                var tasks = await _context.UserTasks
+                    .Where(t => t.UserID == user.UserID && t.TargetDate == today)
+                    .ToListAsync();
+
+                // 2. Nếu hôm nay chưa có task nào (Lần đầu mở app trong ngày)
+                if (!tasks.Any())
+                {
+                    tasks = new List<UserTask>
+                    {
+                        new UserTask { 
+                            UserID = user.UserID, 
+                            TaskName = "Học tập 10 phút", 
+                            Points = 10, 
+                            Type = "STUDY", 
+                            TargetDate = today,
+                            IsCompleted = false 
+                        },
+                        new UserTask { 
+                            UserID = user.UserID, 
+                            TaskName = "Giữ chuỗi hỏa lực", 
+                            Points = 5, 
+                            Type = "STREAK", 
+                            TargetDate = today,
+                            IsCompleted = false 
+                        },
+                        new UserTask { 
+                            UserID = user.UserID, 
+                            TaskName = "Hoàn thành 1 bài Test", 
+                            Points = 20, 
+                            Type = "TEST", 
+                            TargetDate = today,
+                            IsCompleted = false 
+                        }
+                    };
+
+                    _context.UserTasks.AddRange(tasks);
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok(tasks);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi rùi!", error = ex.Message });
+            }
+        }
+
+        [HttpPost("complete-task/{taskId}")]
+        public async Task<IActionResult> CompleteTask(int taskId)
+        {
+            try
+            {
+                var task = await _context.UserTasks.FindAsync(taskId);
+                if (task == null) return NotFound(new { message = "Không tìm thấy nhiệm vụ!" });
+                if (task.IsCompleted) return BadRequest(new { message = "Nhiệm vụ này bạn nhận điểm rồi!" });
+
+                var user = await _context.Users.FindAsync(task.UserID);
+                if (user == null) return NotFound(new { message = "User không tồn tại!" });
+
+                // Đánh dấu hoàn thành
+                task.IsCompleted = true;
+                task.CompletedAt = DateTime.Now;
+
+                // Cộng điểm thưởng của task 
+                user.Points += task.Points;
+
+                //  thông báo
+                var notification = new Notification
+                {
+                    UserID = user.UserID,
+                    Type = task.Type,
+                    Title = "Nhiệm vụ hoàn tất! ✨",
+                    Content = $"Chúc mừng bạn đã xong nhiệm vụ '{task.TaskName}'. +{task.Points} point đã nạp vào ví!",
+                    CreatedAt = DateTime.Now,
+                    IsRead = false
+                };
+                _context.Notifications.Add(notification);
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new { 
+                    message = "Ngon lành cành đào!", 
+                    currentPoints = user.Points,
+                    taskId = task.TaskId 
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi khi nhận thưởng!", error = ex.Message });
+            }
+        }
+
+
     }
 
     public class ProgressUpdateDto { public int Seconds { get; set; } }

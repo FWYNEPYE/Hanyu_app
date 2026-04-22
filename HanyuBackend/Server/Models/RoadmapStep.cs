@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Models;
+
 namespace Server.Models
 {
     public class RoadmapStep
@@ -9,8 +9,12 @@ namespace Server.Models
         public int StepId { get; set; }
         [Required]
         public string Title { get; set; } 
-        public string Description { get; set; }
+        public string? Description { get; set; }
         public int Order { get; set; } 
+        public int? ExamId { get; set; }
+    
+        [ForeignKey("ExamId")]
+        public virtual Exam? Exam { get; set; }
 
         public string? CategoryID { get; set; } 
 

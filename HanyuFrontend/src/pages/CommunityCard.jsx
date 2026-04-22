@@ -3,7 +3,7 @@ import axios from 'axios';
 import { 
   HiOutlineSearch, HiOutlineChevronUp, HiOutlineHeart, 
   HiOutlineDuplicate, HiOutlineFilter, HiOutlineVolumeUp, 
-  HiOutlineFire, HiOutlineX 
+  HiOutlineFire, HiOutlineX, HiOutlineLockClosed 
 } from "react-icons/hi";
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -17,9 +17,7 @@ const CommunityPage = () => {
   const [selectedDeck, setSelectedDeck] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showButton, setShowButton] = useState(false);
-  const [ownedDecks, setOwnedDecks] = useState([]); 
-  const [myDecks, setMyDecks] = useState([]); 
-
+  
   const tabs = ['Tất cả', 'Thịnh hành', 'HSK', 'Giao tiếp', 'IT', 'Du lịch'];
 
   //ds
@@ -70,43 +68,7 @@ const CommunityPage = () => {
   };
 
 
-//check bộ từ xem tải version nào
-const fetchOwnedDecks = async () => {
-    const userId = localStorage.getItem('userId');
-    try {
-        const res = await axios.get(`http://localhost:5252/api/community/owned/${userId}`);
-        setOwnedDecks(res.data);
-    } catch (err) {
-        console.error("Lỗi fetch danh sách đã sở hữu:", err);
-    }
-};
-
-useEffect(() => {
-    fetchOwnedDecks();
-}, []);
-
-
-const fetchMyCollection = async () => {
-  const userId = localStorage.getItem('userId');
-  if (!userId) return;
   
-  try {
-    // timestamp để tránh bị cache trình duyệt
-    const res = await axios.get(`http://localhost:5252/api/category/user/${userId}?t=${Date.now()}`);
-    
-    console.log("Kho đồ của tôi:", res.data); 
-    setMyDecks(res.data); 
-  } catch (err) {
-    console.error("Lỗi lấy kho đồ:", err);
-  }
-};
-
-
-useEffect(() => { 
-    fetchMyCollection(); 
-}, []);
-
-
 
   //Sắp xếp tại Client 
   const sortedDecks = [...decks].sort((a, b) => 
@@ -127,82 +89,67 @@ useEffect(() => {
 
 
 
- const handleOpenPreview = async (deck) => {
-  await fetchMyCollection(); 
-  // Giữ nguyên deck gốc từ Community (có đủ số lượng words gốc)
-  setSelectedDeck(deck); 
+//cho xem vài từ đầu
+const handleOpenPreview = async (deck) => {
+  setSelectedDeck(deck);
+  const userId = localStorage.getItem('userId') || 0;
   try {
-    const res = await axios.get(`/api/community/preview/${deck.id}`);
+    const res = await axios.get(`/api/community/preview/${deck.id}?userId=${userId}`);
     if (Array.isArray(res.data)) {
       setPreviewWords(res.data);
+      // Cập nhật vào selectedDeck để đồng bộ data
       setSelectedDeck(prev => ({
         ...prev,
         vocabularies: res.data 
       }));
     }
-  } catch (err) { 
-    console.error("Lỗi preview:", err); 
+  } catch (err) {
+    console.error("Lỗi preview:", err);
   }
 };
 
 
 
-const handleRedeem = async () => {
-    if (!selectedDeck) return;
-    const currentUserId = localStorage.getItem('userId');
-    setLoading(true); 
-    try {
-        // Kiểm tra xem đã sở hữu chưa để gọi API tương ứng
-        const myCopy = myDecks.find(m => String(m.parentCategoryID) === String(selectedDeck.id));
-        
-        let res;
-        if (myCopy) {
-            res = await axios.post(`http://localhost:5252/api/category/sync/${selectedDeck.id}?userId=${currentUserId}`);
-        } else {
-            res = await axios.post('http://localhost:5252/api/community/redeem', { 
-                deckId: selectedDeck.id.toString(),
-                userId: currentUserId 
-            });
-        }
-        localStorage.setItem('userPoints', res.data.newPoints);
-        window.dispatchEvent(new Event("updatePoints"));
-
-        alert(res.data.msg || res.data.message);
-        await Promise.all([fetchMyCollection(), fetchOwnedDecks()]);
-        setSelectedDeck(null); 
-    } catch (err) { 
-        alert(err.response?.data?.msg || "Lỗi hệ thống"); 
-    } finally {
-        setLoading(false);
-    }
-};
-
-
-const handleSyncCollection = async (categoryId) => {
+//đổi đỉm 
+const handleRedeem = async (deck) => {
   const userId = localStorage.getItem('userId');
-  setLoading(true);
-  try {
-    const res = await axios.post(`http://localhost:5252/api/category/sync/${categoryId}?userId=${userId}`);
-    
-    alert(res.data.message || "Đã đồng bộ!");
-    
-    // trả về số point mới sau khi dùng
-    if (res.data.newPoints !== undefined) {
-          localStorage.setItem('userPoints', res.data.newPoints);
-          window.dispatchEvent(new Event("updatePoints")); 
-        }
+  
+  //  Kiểm tra đăng nhập
+  if (!userId) {
+    alert("Phải đăng nhập mới đổi điểm được chứ!");
+    return;
+  }
 
-        await fetchMyCollection(); 
-        setSelectedDeck(null);
+  // Xác nhận trước khi trừ điểm
+  const confirmRedeem = window.confirm(`Bạn có chắc muốn dùng ${deck.points} điểm để mở khóa bộ "${deck.title}" không?`);
+  
+  if (confirmRedeem) {
+    try {
+      setLoading(true);
+      // Gọi API đổi điểm
+      const res = await axios.post('/api/community/redeem', {
+        userId: parseInt(userId),
+        deckId: deck.id
+      });
 
-  } catch (err) {
-      alert("Lỗi đồng bộ: " + (err.response?.data?.message || err.message));
+      if (res.status === 200) {
+        alert("🎉 Đổi thành công! Chúc bạn học tốt nhé.");
+        
+        //  Cập nhật lại giao diện ngay lập tức: mở khóa toàn bộ từ đang xem
+        const unlockedWords = previewWords.map(word => ({ ...word, isLocked: false }));
+        setPreviewWords(unlockedWords);
+        
+        setDecks(prev => prev.map(d => d.id === deck.id ? { ...d, isOwned: true } : d));
+      }
+    } catch (err) {
+      console.error("Lỗi đổi điểm:", err);
+      // Xử lý các lỗi như: Không đủ điểm, đã sở hữu rồi...
+      alert(err.response?.data?.message || "Có lỗi xảy ra, kiểm tra lại số dư điểm nhé!");
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
+  }
 };
-
-
 
 return (
     <div className="min-h-screen pb-20 px-3 md:px-10 bg-[#FAFBFF]">
@@ -262,8 +209,7 @@ return (
           const currentUserId = parseInt(localStorage.getItem('userId'));
           const isMyDeck = deck.authorId === currentUserId;
 
-          const isAlreadyOwned = myDecks.some(m => m.id === deck.id || m.parentCategoryID === deck.id);
-
+         
           return (
             <motion.div 
               layout key={deck.id} 
@@ -339,18 +285,9 @@ return (
                     </span>
                   </button>
                   
-                  {isMyDeck || isAlreadyOwned ? (
-                    <span className="text-[9px] font-black text-emerald-500 bg-emerald-50 px-2 py-1 rounded-lg">
-                      ĐÃ LƯU
-                    </span>
-                    ) : (
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleOpenPreview(deck); }}
-                      className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 text-white rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 transition-all shadow-md active:scale-95"
-                    >
-                      <HiOutlineDuplicate size={14} /> LƯU 
-                    </button>
-                  )}  
+                  <div className="px-3 py-2 bg-slate-100 text-slate-600 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest group-hover:bg-rose-500 group-hover:text-white transition-all">
+                    Xem chi tiết
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -402,7 +339,7 @@ return (
                       ))}
                     </div>
                   </div>
-                  <button onClick={() => setSelectedDeck(null)} className="p-3 bg-slate-100 rounded-2xl hover:bg-rose-50 hover:text-rose-500 transition-all"><HiOutlineX size={20}/></button>
+                  {/* <button onClick={() => setSelectedDeck(null)} className="p-3 bg-slate-100 rounded-2xl hover:bg-rose-50 hover:text-rose-500 transition-all"><HiOutlineX size={20}/></button> */}
                 </div>
               </div>
 
@@ -420,117 +357,93 @@ return (
                     </tr>
                   </thead>
                   <tbody>
-                    {previewWords.map((item, idx) => (
-                      <tr key={idx} className="bg-slate-50/50 hover:bg-white hover:shadow-md transition-all group">
-                        <td className="px-4 py-4 rounded-l-[20px] text-center w-16">
-                          <button onClick={() => speakHanzi(item.hanzi)} className="w-10 h-10 bg-white border border-slate-100 rounded-xl flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-sm">
-                            <HiOutlineVolumeUp size={18} />
-                          </button>
-                        </td>
-                        <td className="px-4 py-4 font-black text-xl text-slate-800">{item.hanzi}</td>
-                        <td className="px-4 py-4 font-bold text-rose-500 italic text-sm">[{item.pinyin}]</td>
-                        <td className="px-4 py-4 hidden md:table-cell"><span className="px-2 py-1 bg-white border border-slate-200 rounded-md text-[9px] font-black uppercase text-slate-400">{item.type || 'Từ vựng'}</span></td>
-                        <td className="px-4 py-4 font-bold text-slate-700 text-sm  ">{item.mean || item.meaning}</td>
-                        <td className="px-4 py-4 hidden lg:table-cell max-w-[250px]">
-                        <div className="flex flex-col gap-0.5">
-                            <p className="text-[11px] text-slate-600 font-medium line-clamp-2">{item.example}</p>
-                            <p className="text-[10px] text-slate-400  line-clamp-1">{item.exampleMeaning}</p>
-                        </div>
-                    </td>
+                   {previewWords.map((item, idx) => (
+  <tr 
+    key={idx} 
+    className={`transition-all relative ${
+      item.isLocked 
+      ? 'opacity-40 grayscale select-none' 
+      : 'bg-slate-50/50 hover:bg-white hover:shadow-md group'
+    }`}
+  >
+    <td className="px-4 py-4 rounded-l-[20px] text-center w-16">
+      <button 
+        onClick={() => !item.isLocked && speakHanzi(item.hanzi)} 
+        className={`w-10 h-10 bg-white border border-slate-100 rounded-xl flex items-center justify-center ${item.isLocked ? 'text-slate-300' : 'text-rose-500 hover:scale-110 transition-transform'}`}
+        disabled={item.isLocked}
+      >
+        {item.isLocked ? <HiOutlineLockClosed size={18} /> : <HiOutlineVolumeUp size={18} />}
+      </button>
+    </td>
+    
+    <td className="px-4 py-4 font-black text-xl text-slate-800">{item.hanzi}</td>
+    <td className="px-4 py-4 font-bold text-rose-500 italic text-sm">[{item.pinyin}]</td>
+    <td className="px-4 py-4 hidden md:table-cell">
+      <span className="px-2 py-1 bg-white border border-slate-200 rounded-md text-[9px] font-black uppercase text-slate-400">
+        {item.type || 'Từ vựng'}
+      </span>
+    </td>
+    <td className="px-4 py-4 font-bold text-slate-700 text-sm">{item.mean || item.meaning}</td>
+    
+    {/* Cột ví dụ: Nếu khóa thì che nội dung */}
+    <td className="px-4 py-4 hidden lg:table-cell max-w-[250px] relative">
+      <div className="flex flex-col gap-0.5">
+        <p className="text-[11px] text-slate-600 font-medium line-clamp-2">{item.example}</p>
+        <p className="text-[10px] text-slate-400 line-clamp-1">{item.exampleMeaning}</p>
+      </div>
+      
+      {/* Overlay thông báo hiện ngay tại dòng thứ 6 (idx === 5) */}
+      {item.isLocked && idx === 5 && (
+        <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-auto">
+          <span className="bg-slate-900 text-white text-[9px] px-3 py-1.5 rounded-full font-black uppercase tracking-tighter shadow-2xl border border-slate-700 whitespace-nowrap">
+            🔒 Đổi điểm để mở khóa
+          </span>
+        </div>
+      )}
+    </td>
 
-                    <td className="px-4 py-4 hidden xl:table-cell rounded-r-[20px] max-w-[200px]">
-                        <p className="text-[10px] text-slate-400 italic line-clamp-2">
-                        {item.note || '---'}
-                        </p>
-                    </td>
-                      </tr>
-                    ))}
+    <td className="px-4 py-4 hidden xl:table-cell rounded-r-[20px] max-w-[200px]">
+      <p className="text-[10px] text-slate-400 italic line-clamp-2">
+        {item.note || '---'}
+      </p>
+    </td>
+  </tr>
+))}
                   </tbody>
                 </table>
-                {selectedDeck.words > 5 && (
-                  <div className="mt-6 p-6 border-2 border-dashed border-slate-100 rounded-[30px] flex flex-col items-center justify-center bg-slate-50/30">
-                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
-                      <HiOutlineFire className="text-rose-500 animate-bounce" size={24} />
-                    </div>
-                    <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">
-                      Còn <span className="text-rose-500 text-sm">{selectedDeck.words - 5}</span> từ vựng khác trong bộ này
-                    </p>
-                    <p className="text-[10px] text-slate-400 font-bold mt-1">Đổi <span className="text-slate-900">{selectedDeck.points} ☀️</span> để mở khóa toàn bộ nội dung</p>
-                  </div>
-                )}
+                
 
                 
               </div>
 
-              <div className="p-6 bg-white border-t border-slate-50 flex items-center justify-between shrink-0">
-                <button onClick={() => setSelectedDeck(null)} className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hủy bỏ</button>
 
-                  {(() => {
-                      if (!selectedDeck || !myDecks) return null;
+              {/* Trong phần div footer của Modal */}
+<div className="p-6 bg-white border-t border-slate-50 flex items-center justify-between shrink-0">
+  <button onClick={() => setSelectedDeck(null)} className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hủy bỏ</button>
 
-                      //  Tìm bộ copy 
-                      const myCopy = myDecks.find(m => 
-                        String(m.parentCategoryID) === String(selectedDeck.id) || 
-                        String(m.id) === String(selectedDeck.id)
-                      );
-
-                      const vGoc = Number(selectedDeck?.Version || selectedDeck?.version || 0);
-                      const vToi = Number(myCopy?.Version || myCopy?.version || 0);
-
-                      // TH1: CHƯA LƯU
-                      if (!myCopy) {
-                        return (
-                          <button 
-                            onClick={handleRedeem} 
-                            disabled={loading}
-                            className="flex items-center gap-3 px-8 py-3.5 bg-slate-900 text-white rounded-[20px] text-[11px] font-[1000] uppercase hover:bg-rose-500 transition-all shadow-xl active:scale-95 disabled:opacity-50"
-                          >
-                            <HiOutlineDuplicate size={16} /> {loading ? "ĐANG XỬ LÝ..." : `ĐỔI ${selectedDeck.points} ☀️ & LƯU`}
-                          </button>
-                        );
-                      }
-
-                    // TH2: UPDATE
-                    if (vGoc > vToi) {
-                      const storeCount = Number(selectedDeck?.Words || selectedDeck?.words || 0); 
-                      const myCount = Number(myCopy?.Words || myCopy?.words || 0);
-                      const diff = storeCount - myCount; 
-
-                      let extraPoints = 0;
-
-                      if (diff > 0) {
-                        extraPoints = Math.ceil(diff * 0.6);
-                      } else {
-                        extraPoints = 5; 
-                      }
-                      if (diff > 0 && extraPoints < 1) extraPoints = 1;
-
-                      return (
-                        <button 
-                          onClick={() => handleSyncCollection(selectedDeck.id)} 
-                          disabled={loading}
-                          className="flex flex-col items-center px-8 py-3 bg-orange-500 text-white rounded-[20px] shadow-lg hover:bg-orange-600 transition-all active:scale-95 disabled:opacity-50"
-                        >
-                          <span className="text-[12px] font-[1000] uppercase">
-                            {loading ? "ĐANG ĐỒNG BỘ..." : `ĐỔI THÊM ${extraPoints} ☀️ ĐỂ CẬP NHẬT`}
-                          </span>
-                          <span className="text-[9px] font-bold opacity-80 uppercase mt-0.5">
-                            {diff > 0 ? `Cập nhật thêm ${diff} từ mới` : "Cập nhật dữ liệu bản mới"} (v.{vGoc})
-                          </span>
-                        </button>
-                      );
-                    }
-                    // TH3 đã lưu và cập nhật
-                    return (
-                      <button 
-                        disabled 
-                        className="flex items-center gap-3 px-8 py-3.5 bg-emerald-50 text-emerald-500 border border-emerald-100 rounded-[20px] text-[11px] font-[1000] uppercase opacity-80"
-                      >
-                        <HiOutlineDuplicate size={16} /> ĐÃ CẬP NHẬT BẢN MỚI NHẤT (v.{vToi})
-                      </button>
-                    );
-                  })()}
-              </div>
+  {/* Check nếu có bất kỳ từ nào trong danh sách preview đang bị khóa */}
+  {previewWords.some(w => w.isLocked) ? (
+    <button 
+      onClick={() => handleRedeem(selectedDeck)}
+      className="flex items-center gap-2 bg-rose-500 text-white px-6 py-3 rounded-2xl text-[11px] font-[1000] uppercase tracking-wider shadow-lg shadow-rose-200 hover:bg-rose-600 transition-all"
+    >
+      <HiOutlineFire size={16} />
+      Đổi {selectedDeck.points} điểm để luyện tập
+    </button>
+  ) : (
+    <div className="flex items-center gap-4">
+        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-1">
+          ✅ Bạn đã sở hữu bộ từ này
+        </span>
+        <button 
+          className="bg-slate-900 text-white px-4 py-2 rounded-xl text-[10px] font-bold uppercase"
+          onClick={() => alert("Chuyển hướng đến trang học...")}
+        >
+          Học ngay
+        </button>
+    </div>
+  )}
+</div>
             </motion.div>
           </div>
         )}

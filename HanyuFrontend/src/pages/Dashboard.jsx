@@ -15,6 +15,9 @@ const Dashboard = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false); //đxuat
 
+  const [notifications, setNotifications] = useState([]);
+
+  
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [showCoinFly, setShowCoinFly] = useState(false);
 
@@ -25,7 +28,7 @@ const Dashboard = () => {
     email: "...",
     avatar: "https://ui-avatars.com/api/?name=U&background=fff&color=EF4444",
     joinDate: "...",
-    points: 0,           // Thêm dòng này
+    points: 0,          
     availableAIUsage: 0
   });
 
@@ -160,6 +163,47 @@ useEffect(() => {
     }
   };
 
+  //thông báo
+  const fetchNotifications = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const res = await axios.get("http://localhost:5252/api/Notification/user-notifications", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setNotifications(res.data);
+  } catch (err) {
+    console.error("Lỗi lấy thông báo:", err);
+  }
+};
+
+const handleMarkAsRead = async (notiId) => {
+  if (!notiId) return;
+
+  try {
+    const token = localStorage.getItem("token");
+    // Gọi API cập nhật DB
+    await axios.post(`http://localhost:5252/api/Notification/mark-as-read/${notiId}`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    setNotifications(prev => 
+      prev.map(n => n.notiId === notiId ? { ...n, isRead: true } : n)
+    );
+  } catch (err) {
+    console.error("Lỗi cập nhật trạng thái đã đọc:", err);
+  }
+};
+
+
+
+useEffect(() => {
+  fetchNotifications();
+  // Cứ mỗi 2 phút check thông báo mới một lần cho nó "bảnh"
+  const interval = setInterval(fetchNotifications, 120000);
+  return () => clearInterval(interval);
+}, []);
+
+
   // Logic Game
   useEffect(() => {
     if (!location.pathname.includes('/dashboard/game')) {
@@ -171,11 +215,8 @@ useEffect(() => {
 
   const isDashboardHome = location.pathname === '/dashboard' || location.pathname === '/dashboard/';
   const isPlayingGame = location.pathname.includes('/game/play');
-
-  const [notifications] = useState([
-    { id: 1, title: "Nhắc nhở học tập", content: "Chưa hoàn thành mục tiêu 20 từ hôm nay đâu nhe!", time: "10 phút trước", type: "warning" },
-    { id: 2, title: "Hệ thống", content: "Chào mừng đến với HANYU.", time: "1 giờ trước", type: "info" }
-  ]);
+const unreadCount = notifications.filter(n => !n.isRead).length;
+  
 
   const menus = [
     { name: "Trang chủ", link: "/dashboard", icon: HiOutlineHome, color: "text-blue-500" },
@@ -288,15 +329,70 @@ useEffect(() => {
                 <HiOutlineX size={24} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-               {notifications.map((noti) => (
-                 <div key={noti.id} className="bg-white p-5 rounded-[25px] border-l-4 border-red-500 shadow-sm hover:scale-[1.02] transition-transform cursor-pointer text-left">
-                    <p className="text-[10px] font-black uppercase text-red-500 mb-1">{noti.title}</p>
-                    <p className="text-sm font-bold text-gray-700 leading-relaxed">{noti.content}</p>
-                    <p className="text-[10px] text-gray-400 mt-3 font-bold uppercase tracking-tighter">{noti.time}</p>
-                 </div>
-               ))}
-            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
+                {notifications.length > 0 ? (
+                  notifications.map((noti) => {
+                    const id = noti.notiId; 
+                    const isStreak = noti.type?.toUpperCase() === 'STREAK';
+                    const isRead = noti.isRead;
+
+                    return (
+                      <div 
+                        key={id} 
+                        onClick={() => handleMarkAsRead(id)} 
+                        className={`group p-5 rounded-[25px] border-l-4 transition-all duration-300 cursor-pointer text-left
+                          ${isRead 
+                            ? 'bg-gray-50/50 border-gray-200 opacity-60 shadow-none' 
+                            : isStreak 
+                              ? 'bg-orange-50 border-orange-500 shadow-lg shadow-orange-100' 
+                              : 'bg-white border-red-500 shadow-md hover:shadow-lg'
+                          }
+                        `}
+                      >
+                        <div className="flex justify-between items-start mb-1">
+                          <p className={`text-[10px] font-black uppercase tracking-widest
+                            ${isRead ? 'text-gray-400' : isStreak ? 'text-orange-600' : 'text-red-500'}`}>
+                            {isStreak ? '🔥 ' : '🔔 '} {noti.type}
+                          </p>
+                          
+                          {/* Dấu chấm báo hiệu chưa đọc */}
+                          {!isRead && (
+                            <span className="relative flex h-2 w-2">
+                              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isStreak ? 'bg-orange-400' : 'bg-red-400'}`}></span>
+                              <span className={`relative inline-flex rounded-full h-2 w-2 ${isStreak ? 'bg-orange-500' : 'bg-red-500'}`}></span>
+                            </span>
+                          )}
+                        </div>
+
+                        <h4 className={`text-sm font-black leading-tight mb-1 transition-colors
+                          ${isRead ? 'text-gray-500' : 'text-gray-800'}`}>
+                          {noti.title}
+                        </h4>
+
+                        <p className={`text-xs font-medium leading-relaxed
+                          ${isRead ? 'text-gray-400' : 'text-gray-600'}`}>
+                          {noti.content}
+                        </p>
+
+                        <div className="flex justify-between items-center mt-3 border-t border-gray-100 pt-2">
+                          <p className="text-[9px] text-gray-300 font-bold uppercase tracking-tighter">
+                            {new Date(noti.createdAt).toLocaleDateString('vi-VN')}
+                          </p>
+                          <p className="text-[9px] text-gray-300 font-bold">{new Date(noti.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-20">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <span className="text-2xl opacity-50">📭</span>
+                    </div>
+                    <p className="text-gray-400 font-black text-xs uppercase tracking-widest"> Không có tin mới!</p>
+                  </div>
+                )}
+              </div>
           </div>
         </div>
       )}
@@ -396,12 +492,21 @@ useEffect(() => {
                 <span className="text-[11px] font-black text-blue-700 uppercase">
                   {user.availableAIUsage}
                 </span>
-                {/* Dấu cộng để báo hiệu là có thể mua thêm */}
                 <div className="ml-2 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-white text-[10px]">
                   +
                 </div>
               </div>
-            <HiOutlineBell size={26} className="text-gray-400 cursor-pointer hover:text-red-500" onClick={() => setIsNotiOpen(true)} />
+            <div className="relative cursor-pointer group" onClick={() => setIsNotiOpen(true)}>
+  <HiOutlineBell size={26} className="text-gray-400 group-hover:text-red-500 transition-colors" />
+  {unreadCount > 0 && (
+    <span className="absolute -top-1 -right-1 flex h-4 w-4">
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+      <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[8px] text-white font-black items-center justify-center">
+        {unreadCount > 9 ? '9+' : unreadCount}
+      </span>
+    </span>
+  )}
+</div>
             
             {/* Click Profile */}
             <div className="flex items-center gap-4 md:border-l md:pl-8 border-gray-100 cursor-pointer group" onClick={() => setIsProfileOpen(true)}>

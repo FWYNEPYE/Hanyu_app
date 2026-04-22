@@ -14,9 +14,13 @@ const DashboardHome = () => {
   // --- STATE DỮ LIỆU TỪ BACKEND ---
   const [loading, setLoading] = useState(true);
   const [backendData, setBackendData] = useState(null);
-  const { fetchUserData, triggerCoinFly } = useOutletContext();
+  const { fetchUserData, triggerCoinFly, dailyTasks, handleClaimTask } = useOutletContext();
 
-  // 1. Logic Đếm thời gian học (Giữ nguyên logic gốc)
+  const [vocabData, setVocabData] = useState([]);
+
+  const [dueCount, setDueCount] = useState(0);
+
+  // Logic Đếm thời gian học (Giữ nguyên logic gốc)
   const [seconds, setSeconds] = useState(0); 
   
   const [isRewarded, setIsRewarded] = useState(false);
@@ -26,53 +30,85 @@ const DashboardHome = () => {
 
 
   // Lấy dữ liệu từ Backend khi load trang
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const token = localStorage.getItem('token'); // Lấy token người dùng đăng nhập
-        const response = await axios.get('http://localhost:5252/api/Dashboard/stats', {
-          headers: { Authorization: `Bearer ${token}` }
+useEffect(() => {
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true); // Bắt đầu trạng thái tải
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      // CHẠY SONG SONG CẢ 2 API ĐỂ TỐI ƯU TỐC ĐỘ (Dùng Promise.all)
+      const [dashRes, srsRes] = await Promise.all([
+        axios.get('http://localhost:5252/api/Dashboard/stats', { headers }),
+        axios.get('http://localhost:5252/api/UserProgress/srs-list', { headers })
+      ]);
+
+      // 1. Xử lý dữ liệu Dashboard
+      if (dashRes.data) {
+        setBackendData(dashRes.data);
+
+        // Lấy thời gian học của ngày hôm nay (todayStr định dạng dd/mm)
+        const todayStr = new Date().toLocaleDateString('en-GB', { 
+          day: '2-digit', 
+          month: '2-digit' 
         });
         
-        setBackendData(response.data);
+        const todayProgress = dashRes.data.activityChart?.find(x => x.date === todayStr);
         
-        // Lấy thời gian học của ngày hôm nay từ ActivityChart (nếu có)
-        const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' }).replace('/', '/');
-        const todayProgress = response.data.activityChart.find(x => x.date === todayStr);
         if (todayProgress) {
           setSeconds(todayProgress.seconds);
+          // Nếu đã học đủ 10 phút (600s) hoặc backend đánh dấu hoàn thành
           if (todayProgress.isCompleted || todayProgress.seconds >= 600) {
-             setIsRewarded(true);
+            setIsRewarded(true);
           }
         }
-        
-      } catch (error) {
-        console.error("Lỗi khi lấy dữ liệu dashboard:", error);
-      } finally {
-        setLoading(false);
       }
-    };
 
-    fetchDashboardData();
-  }, []);
+      // đếm từ đến hạn
+      if (srsRes.data && Array.isArray(srsRes.data)) {
+        setVocabData(srsRes.data);
+
+        const today = new Date().toISOString().split('T')[0]; // Lấy ngày YYYY-MM-DD
+        
+        const count = srsRes.data.filter(v => {
+          if (!v.next) return false;
+          const formattedNextDate = v.next.split('T')[0];
+          return formattedNextDate <= today; 
+        }).length;
+        
+        setDueCount(count);
+      }
+
+      console.log("✅ Đồng bộ Dashboard & SRS thành công!");
+
+    } catch (error) {
+      console.error("❌ Lỗi khi lấy dữ liệu tổng hợp:", error);
+    } finally {
+      setLoading(false); 
+    }
+  };
+
+  fetchDashboardData();
+}, []); 
 
 
 
 const handleAutoClaim = async () => {
   try {
     setIsRewarded(true);
-    triggerCoinFly();
+    triggerCoinFly(); // Hiệu ứng xu bay
 
     const token = localStorage.getItem("token");
-    // 1. Cộng điểm
+    
+    const totalPoints = 15; 
+
     await axios.post("http://localhost:5252/api/User/add-points", 
-      { pointsToAdd: 10 },
+      { pointsToAdd: totalPoints },
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
     await saveProgressToBackend(600);
 
-    // 3. Cập nhật UI
     setTimeout(async () => {
       fetchUserData(); 
       
@@ -81,7 +117,7 @@ const handleAutoClaim = async () => {
       });
       setBackendData(response.data); 
       
-      console.log("🔥 Dashboard đã cập nhật trạng thái mới!");
+      console.log("🔥 Đã cộng 5 điểm thưởng Streak và 10 điểm học tập!");
     }, 1200);
 
   } catch (err) {
@@ -137,8 +173,6 @@ useEffect(() => {
       // 1. Kích hoạt hiệu ứng bay ngay lập tức cho sướng mắt
       triggerCoinFly();
 
-      // 2. Gọi API cộng điểm (mày đã viết hàm handleAddPoints ở Cha nhưng chưa truyền xuống)
-      // Ở đây tao ví dụ gọi trực tiếp hoặc dùng hàm từ context nếu mày truyền nó xuống
       const token = localStorage.getItem("token");
       await fetch("http://localhost:5252/api/User/add-points", {
         method: "POST",
@@ -149,7 +183,7 @@ useEffect(() => {
         body: JSON.stringify({ pointsToAdd: 10 })
       });
 
-      // 3. Đợi xu bay gần tới nơi thì cập nhật số thực trên Header
+      // Đợi xu bay gần tới nơi thì cập nhật số thực trên Header
       setTimeout(() => {
         fetchUserData();
       }, 1200);
@@ -197,23 +231,60 @@ const saveProgressToBackend = async (currentSeconds) => {
   const studyMinutes = Math.floor(seconds / 60);
 const isGoalReached = seconds >= 600;
 
-  const streakHistory = useMemo(() => {
-    return backendData?.activityChart.map(item => {
-      const [day, month] = item.date.split('/');
-      const dateObj = new Date(new Date().getFullYear(), month - 1, day);
-      const label = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"][dateObj.getDay()];
-      return {
-        label,
-        active: item.isCompleted || (item.date === new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' }) && isGoalReached)
-      };
-    }) || [];
-  }, [backendData, isGoalReached]);
+const streakHistory = useMemo(() => {
+  if (!backendData?.activityChart) return [];
+
+  // 1. Lấy ngày đầu tuần (Thứ 2) của tuần hiện tại
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0 (CN) -> 6 (T7)
+  const diffToMonday = now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
+  const monday = new Date(now.setDate(diffToMonday));
+  monday.setHours(0, 0, 0, 0);
+
+  // 2. Tạo mảng 7 ngày trong tuần này (T2 -> CN)
+  const daysInWeek = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    daysInWeek.push({
+      fullDate: d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' }), // định dạng "dd/mm"
+      label: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"][i]
+    });
+  }
+
+  //  Map dữ liệu từ backend vào đúng các ngày trong tuần
+  return daysInWeek.map(day => {
+    // Tìm trong backend xem ngày này có dữ liệu không
+    const dayData = backendData.activityChart.find(x => x.date === day.fullDate);
+    
+    const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
+    const isActive = dayData?.isCompleted || (day.fullDate === todayStr && isGoalReached);
+
+    return {
+      label: day.label,
+      active: isActive
+    };
+  });
+
+}, [backendData, isGoalReached]);
 
 
-const stats = useMemo(() => [
-    { id: 'task', label: "Nhiệm vụ hôm nay", value: "HSK 1: Động từ", sub: "Còn 5 từ", icon: HiOutlineClipboardList, color: "text-blue-500", bg: "bg-blue-50", link: "/dashboard/vocabulary", isLink: true },
-    { id: 'review', label: "Từ đến hạn ôn tập", value: "12 từ", sub: "Nhắc lại ngay", icon: HiOutlineBell, color: "text-red-500", bg: "bg-red-50", link: "/dashboard/review", isLink: true },
-    { id: 'progress', label: "Tiến độ hiện tại", value: "65%", sub: `Tổng: ${backendData?.totalVocabulary || 0} từ`, icon: HiOutlineTrendingUp, color: "text-green-500", bg: "bg-green-50", isLink: false },
+const stats = useMemo(() => {
+  const totalVocab = backendData?.totalVocabulary || 0;
+  
+  // Giả sử sếp coi những từ ở StepId >= 8 là "đã thuộc"
+  const learnedCount = vocabData.filter(v => (v.stepId || v.StepId) >= 8).length;
+  
+  //  Tính phần trăm 
+  const progressPercent = totalVocab > 0 
+    ? Math.round((learnedCount / totalVocab) * 100) 
+    : 0;
+  
+  
+  return [
+    { id: 'task', label: "Nhiệm vụ hôm nay", value: dailyTasks?.find(t => !t.isCompleted)?.taskName || "Đã xong hết!", sub: dailyTasks?.filter(t => !t.isCompleted).length > 0 ? "Làm ngay thôi 🔥" : "Nghỉ ngơi nhé ✅", icon: HiOutlineClipboardList, color: "text-blue-500", bg: "bg-blue-50", link: "/dashboard/vocabulary", isLink: true },
+    { id: 'review', label: "Từ đến hạn ôn tập", value: `${dueCount} từ`, sub: dueCount > 0 ? "Nhắc lại ngay 🔥" : "Đã hoàn thành ✅", icon: HiOutlineBell, color: "text-red-500", bg: "bg-red-50", link: "/dashboard/game/srs", isLink: true, isWarning: dueCount > 0 },
+    { id: 'progress', label: "Tiến độ hiện tại", value: `${progressPercent}%`, sub: `Đã thuộc: ${learnedCount}/${totalVocab} từ`, icon: HiOutlineTrendingUp, color: "text-green-500", bg: "bg-green-50", isLink: false },
     { 
       id: 'performance', 
       label: "Thời gian học", 
@@ -225,14 +296,39 @@ const stats = useMemo(() => [
       isLink: false,
       isWarning: !isGoalReached
     },
-  ], [seconds, backendData, isGoalReached]);
+  ]; }, [seconds, backendData, isGoalReached, dueCount, vocabData]);
 
-  const learningRoadmaps = useMemo(() => [
-    { title: "HSK", desc: "Chứng chỉ năng lực Hán Ngữ (6 cấp)", icon: HiOutlineFlag, color: "text-red-500", bg: "bg-red-50", progress: 40, status: "Đang học" },
-    { title: "TOCFL", desc: "Kỳ thi năng lực Hoa Ngữ", icon: HiOutlineBadgeCheck, color: "text-blue-500", bg: "bg-blue-50", progress: 0, status: "Chưa bắt đầu" },
-    { title: "Giao tiếp thực tế", desc: "Tiếng Trung đời sống & Phản xạ", icon: HiOutlineTranslate, color: "text-orange-500", bg: "bg-orange-50", progress: 85, status: "Gần hoàn thành" },
-    { title: "Học tập Học thuật", desc: "Bộ thủ, cấu trúc câu & viết", icon: HiOutlineAcademicCap, color: "text-purple-500", bg: "bg-purple-50", progress: 10, status: "Mới bắt đầu" },
-  ], [backendData]);
+
+
+  const learningRoadmaps = useMemo(() => {
+const calculateProgress = (categoryName) => {
+  if (!vocabData || !Array.isArray(vocabData) || vocabData.length === 0) return 0;
+  
+  const categoryWords = vocabData.filter(v => {
+    const val = String(v.category || v.Category || v.type || v.level || "").toLowerCase();
+    return val.includes(categoryName.toLowerCase());
+  });
+  
+  if (categoryWords.length === 0) return 0;
+
+  // Tính số từ đã thuộc (Lv >= 8)
+  const completed = categoryWords.filter(v => Number(v.stepId || v.StepId) >= 0).length;
+  
+  return Math.round((completed / categoryWords.length) * 100);
+};
+
+  const hskProgress = calculateProgress('HSK');
+  const tocflProgress = calculateProgress('TOCFL');
+  const communicationProgress = calculateProgress('Giao tiếp thực tế');
+  const academicProgress = calculateProgress('Học tập Học thuật');
+
+    
+    return [
+    { title: "HSK", desc: "Chứng chỉ năng lực Hán Ngữ (9 cấp)", icon: HiOutlineFlag, color: "text-red-500", bg: "bg-red-50", progress: hskProgress, status: hskProgress > 0 ? (hskProgress === 100 ? "Hoàn thành" : "Đang học") : "Chưa bắt đầu" },
+    { title: "TOCFL", desc: "Kỳ thi năng lực Hoa Ngữ", icon: HiOutlineBadgeCheck, color: "text-blue-500", bg: "bg-blue-50", progress: tocflProgress, status: tocflProgress > 0 ? "Đang học" : "Chưa bắt đầu" },
+    { title: "Giao tiếp thực tế", desc: "Tiếng Trung đời sống & Phản xạ", icon: HiOutlineTranslate, color: "text-orange-500", bg: "bg-orange-50", progress: communicationProgress, status: communicationProgress > 0 ? "Đang học" : "Chưa bắt đầu" },
+    { title: "Học tập Học thuật", desc: "Bộ thủ, cấu trúc câu & viết", icon: HiOutlineAcademicCap, color: "text-purple-500", bg: "bg-purple-50", progress: academicProgress, status: academicProgress > 0 ? "Đang học" : "Chưa bắt đầu" },
+  ]; }, [vocabData, backendData]);
 
   if (loading) return <div className="p-10 text-center font-black animate-pulse">ĐANG TẢI DỮ LIỆU...</div>;
 
@@ -257,7 +353,7 @@ const stats = useMemo(() => [
             <span className="font-black uppercase tracking-widest text-[10px]">Chuỗi ngày học</span>
           </div>
           <div className="flex items-baseline gap-1.5 mb-4">
-            <span className="text-4xl font-black "> {backendData?.userStats.currentStreak || 0}</span>
+            <span className="text-4xl font-black "> {isGoalReached ? (backendData?.userStats.currentStreak || 0) : 0}</span>
             <span className="text-sm font-bold opacity-90 uppercase text-white">Ngày</span>
           </div>
           {!isGoalReached && (
@@ -288,7 +384,7 @@ const stats = useMemo(() => [
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest break-words leading-tight">{item.label}</p>
-                <h4 className={`text-base font-black leading-tight mt-0.5 break-words uppercase tracking-tighter ${item.id === 'performance' ? 'font-mono' : ''} ${item.isWarning ? 'text-red-600' : 'text-gray-800'}`}>
+                <h4 className={`text-sm font-black leading-tight mt-0.5 break-words  tracking-tighter ${item.id === 'performance' ? 'font-mono' : ''} ${item.isWarning ? 'text-red-600' : 'text-gray-800'}`}>
                     {item.value}
                 </h4>
                 {item.id === 'progress' ? (
@@ -308,6 +404,7 @@ const stats = useMemo(() => [
           ) : ( <div key={item.id} className={`bg-white p-6 rounded-[35px] border shadow-sm flex flex-col justify-center min-h-[110px] transition-colors ${item.isWarning ? 'border-red-100' : 'border-gray-100'}`}>{Content}</div> );
         })}
       </div>
+      
 
       <div className="space-y-4">
         <h3 className="text-center text-xs font-black uppercase tracking-[0.5em] text-gray-300">TRUY CẬP NHANH</h3>
@@ -336,7 +433,6 @@ const stats = useMemo(() => [
   <h3 className="text-center text-xs font-black uppercase tracking-[0.5em] text-gray-300">LỘ TRÌNH</h3>
   <div className="grid grid-cols-1 gap-4">
     {learningRoadmaps.map((roadmap, i) => (
-      /* Thêm Link ở đây, chuyển ID hoặc slug qua URL */
       <Link 
         key={i} 
        to={`/dashboard/roadmap/${roadmap.title.toLowerCase().replace(/\s+/g, '-')}`}
@@ -353,7 +449,7 @@ const stats = useMemo(() => [
           <div className="flex flex-col gap-1.5">
             <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-gray-400 leading-none">
               <span>Hoàn thành</span>
-              <span className="text-gray-800 italic">{roadmap.progress}%</span>
+              <span className="text-gray-800 ">{roadmap.progress}%</span>
             </div>
             <div className="w-full h-1.5 bg-gray-50 rounded-full overflow-hidden border border-gray-100">
               <div className={`h-full rounded-full transition-all duration-1000 ${roadmap.color.replace('text', 'bg')}`} style={{ width: `${roadmap.progress}%` }}></div>

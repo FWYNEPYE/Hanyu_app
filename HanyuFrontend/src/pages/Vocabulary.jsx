@@ -59,25 +59,13 @@ const fetchData = async () => {
       axios.get(`${API_BASE_URL}/Vocabulary`)
     ]);
 
-    // Ép hết ID về String để Map không bị nhầm giữa số và chuỗi
-    const owned = (collectionRes.data.ownedByMe || []).map(item => ({
-      ...item,
-      categoryID: String(item.categoryID), 
-      isBorrowed: false 
-    }));
-
-    const borrowed = (collectionRes.data.borrowed || []).map(item => ({
-      ...(item.category || {}), 
-      categoryID: String(item.category?.categoryID), 
-      isBorrowed: true, 
-      hasUpdate: item.hasUpdate
-    }));
-
-    const allRaw = [...owned, ...borrowed];
-    
-    const uniqueCollections = Array.from(
-      new Map(allRaw.map(item => [item.categoryID, item])).values()
-    );
+const owned = (collectionRes.data.ownedByMe || []).map(item => ({
+  ...item,
+  categoryID: String(item.categoryID), 
+  isBorrowed: false 
+}));
+   
+    const uniqueCollections = owned;
 
     setCollections(uniqueCollections);
     setVocabData(vocabRes.data);
@@ -271,7 +259,6 @@ const handleTogglePublic = async () => {
     );
 
     if (response.status === 200) {
-      // Cập nhật lại danh sách collections cục bộ để UI thay đổi ngay lập tức (đổi màu, đổi icon, đổi trạng thái isPublic)
       setCollections(prev => prev.map(cat => 
         cat.categoryID === targetCategory.categoryID 
         ? { ...cat, ...updateData, isPublic: nextStatus } 

@@ -44,6 +44,12 @@ namespace Server.Migrations
                     b.Property<string>("IconName")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsLocked")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPending")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsPublic")
                         .HasColumnType("bit");
 
@@ -97,6 +103,10 @@ namespace Server.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("SessionID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Translation")
                         .HasColumnType("nvarchar(max)");
 
@@ -118,8 +128,14 @@ namespace Server.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProgressId"));
 
+                    b.Property<int>("ActionCount")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("bit");
+
+                    b.Property<int>("PointsGained")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("StudyDate")
                         .HasColumnType("datetime2");
@@ -152,6 +168,9 @@ namespace Server.Migrations
                     b.Property<int>("PointReward")
                         .HasColumnType("int");
 
+                    b.Property<int>("TimeLimit")
+                        .HasColumnType("int");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -161,6 +180,159 @@ namespace Server.Migrations
                     b.ToTable("Exams");
                 });
 
+            modelBuilder.Entity("Server.Models.GameLog", b =>
+                {
+                    b.Property<int>("LogId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LogId"));
+
+                    b.Property<string>("CategoryID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("CompletionTime")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CorrectAnswers")
+                        .HasColumnType("int");
+
+                    b.Property<string>("GameId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("PlayedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalQuestions")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserID")
+                        .HasColumnType("int");
+
+                    b.HasKey("LogId");
+
+                    b.HasIndex("CategoryID");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("UserID");
+
+                    b.ToTable("GameLogs");
+                });
+
+            modelBuilder.Entity("Server.Models.Message", b =>
+                {
+                    b.Property<int>("MessId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MessId"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserID")
+                        .HasColumnType("int");
+
+                    b.HasKey("MessId");
+
+                    b.HasIndex("UserID");
+
+                    b.ToTable("Messages");
+                });
+
+            modelBuilder.Entity("Server.Models.Minigame", b =>
+                {
+                    b.Property<string>("GameId")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("BasePoint")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Difficulty")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("LastUpdated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MinQuestions")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("TimeLimit")
+                        .HasColumnType("int");
+
+                    b.HasKey("GameId");
+
+                    b.ToTable("Minigames");
+                });
+
+            modelBuilder.Entity("Server.Models.Notification", b =>
+                {
+                    b.Property<int>("NotiId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("NotiId"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("RelatedId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UserID")
+                        .HasColumnType("int");
+
+                    b.HasKey("NotiId");
+
+                    b.HasIndex("UserID");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("Server.Models.Question", b =>
                 {
                     b.Property<int>("QuestionId")
@@ -168,6 +340,9 @@ namespace Server.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("QuestionId"));
+
+                    b.Property<string>("AudioUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Content")
                         .IsRequired()
@@ -180,27 +355,64 @@ namespace Server.Migrations
                     b.Property<int>("ExamId")
                         .HasColumnType("int");
 
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("OptionA")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("OptionB")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("OptionC")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("OptionD")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Pinyin")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("QuestionType")
+                        .HasColumnType("int");
 
                     b.HasKey("QuestionId");
 
                     b.HasIndex("ExamId");
 
                     b.ToTable("Questions");
+                });
+
+            modelBuilder.Entity("Server.Models.Roadmap", b =>
+                {
+                    b.Property<int>("RoadmapId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoadmapId"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ExamId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsExamStep")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Slug")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("RoadmapId");
+
+                    b.ToTable("Roadmaps");
                 });
 
             modelBuilder.Entity("Server.Models.RoadmapStep", b =>
@@ -215,8 +427,10 @@ namespace Server.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ExamId")
+                        .HasColumnType("int");
 
                     b.Property<int>("Order")
                         .HasColumnType("int");
@@ -232,9 +446,35 @@ namespace Server.Migrations
 
                     b.HasIndex("CategoryID");
 
+                    b.HasIndex("ExamId");
+
                     b.HasIndex("RoadmapId");
 
                     b.ToTable("RoadmapSteps");
+                });
+
+            modelBuilder.Entity("Server.Models.SentencePuzzle", b =>
+                {
+                    b.Property<int>("PuzzleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PuzzleId"));
+
+                    b.Property<string>("CorrectSentence")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Pinyin")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PointsReward")
+                        .HasColumnType("int");
+
+                    b.HasKey("PuzzleId");
+
+                    b.ToTable("SentencePuzzles");
                 });
 
             modelBuilder.Entity("Server.Models.Subtitle", b =>
@@ -274,6 +514,27 @@ namespace Server.Migrations
                     b.ToTable("Subtitles");
                 });
 
+            modelBuilder.Entity("Server.Models.SystemSetting", b =>
+                {
+                    b.Property<int>("SysId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SysId"));
+
+                    b.Property<string>("SettingKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SettingValue")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("SysId");
+
+                    b.ToTable("SystemSettings");
+                });
+
             modelBuilder.Entity("Server.Models.User", b =>
                 {
                     b.Property<int>("UserID")
@@ -302,6 +563,12 @@ namespace Server.Migrations
                     b.Property<string>("GoogleId")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsLocked")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime?>("LastStudyDate")
                         .HasColumnType("datetime2");
 
@@ -315,6 +582,10 @@ namespace Server.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Rank")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("TotalExp")
@@ -378,6 +649,109 @@ namespace Server.Migrations
                     b.HasIndex("UserID");
 
                     b.ToTable("UserProgresses");
+                });
+
+            modelBuilder.Entity("Server.Models.UserPuzzleCompletion", b =>
+                {
+                    b.Property<int>("UPuzzleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UPuzzleId"));
+
+                    b.Property<DateTime>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PuzzleID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserID")
+                        .HasColumnType("int");
+
+                    b.HasKey("UPuzzleId");
+
+                    b.HasIndex("PuzzleID");
+
+                    b.HasIndex("UserID");
+
+                    b.ToTable("UserPuzzleCompletions");
+                });
+
+            modelBuilder.Entity("Server.Models.UserTask", b =>
+                {
+                    b.Property<int>("TaskId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TaskId"));
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("TargetDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TaskName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UserID")
+                        .HasColumnType("int");
+
+                    b.HasKey("TaskId");
+
+                    b.HasIndex("UserID");
+
+                    b.ToTable("UserTasks");
+                });
+
+            modelBuilder.Entity("Server.Models.UserVocaProgress", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CurrentLevel")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsSaved")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("NextReview")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("VocaId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserID");
+
+                    b.HasIndex("VocaId");
+
+                    b.ToTable("UserVocaProgresses");
                 });
 
             modelBuilder.Entity("Server.Models.Video", b =>
@@ -477,41 +851,6 @@ namespace Server.Migrations
                     b.ToTable("Vocabularies");
                 });
 
-            modelBuilder.Entity("System.Models.Roadmap", b =>
-                {
-                    b.Property<int>("RoadId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoadId"));
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("ExamId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ImageUrl")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsExamStep")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Slug")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("RoadId");
-
-                    b.ToTable("Roadmaps");
-                });
-
             modelBuilder.Entity("Server.Models.Category", b =>
                 {
                     b.HasOne("Server.Models.User", "User")
@@ -543,6 +882,55 @@ namespace Server.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Server.Models.GameLog", b =>
+                {
+                    b.HasOne("Server.Models.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Server.Models.Minigame", "Minigame")
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Minigame");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Server.Models.Message", b =>
+                {
+                    b.HasOne("Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Server.Models.Notification", b =>
+                {
+                    b.HasOne("Server.Models.User", "User")
+                        .WithMany("Notifications")
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Server.Models.Question", b =>
                 {
                     b.HasOne("Server.Models.Exam", "Exam")
@@ -557,16 +945,23 @@ namespace Server.Migrations
             modelBuilder.Entity("Server.Models.RoadmapStep", b =>
                 {
                     b.HasOne("Server.Models.Category", "Category")
-                        .WithMany()
+                        .WithMany("RoadmapSteps")
                         .HasForeignKey("CategoryID");
 
-                    b.HasOne("System.Models.Roadmap", "Roadmap")
+                    b.HasOne("Server.Models.Exam", "Exam")
+                        .WithMany()
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Server.Models.Roadmap", "Roadmap")
                         .WithMany("Steps")
                         .HasForeignKey("RoadmapId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Category");
+
+                    b.Navigation("Exam");
 
                     b.Navigation("Roadmap");
                 });
@@ -620,6 +1015,55 @@ namespace Server.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Server.Models.UserPuzzleCompletion", b =>
+                {
+                    b.HasOne("Server.Models.SentencePuzzle", "SentencePuzzle")
+                        .WithMany()
+                        .HasForeignKey("PuzzleID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SentencePuzzle");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Server.Models.UserTask", b =>
+                {
+                    b.HasOne("Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Server.Models.UserVocaProgress", b =>
+                {
+                    b.HasOne("Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Server.Models.Vocabulary", "Vocabulary")
+                        .WithMany()
+                        .HasForeignKey("VocaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+
+                    b.Navigation("Vocabulary");
+                });
+
             modelBuilder.Entity("Server.Models.Video", b =>
                 {
                     b.HasOne("Server.Models.User", "User")
@@ -642,12 +1086,19 @@ namespace Server.Migrations
 
             modelBuilder.Entity("Server.Models.Category", b =>
                 {
+                    b.Navigation("RoadmapSteps");
+
                     b.Navigation("Vocabularies");
                 });
 
             modelBuilder.Entity("Server.Models.Exam", b =>
                 {
                     b.Navigation("Questions");
+                });
+
+            modelBuilder.Entity("Server.Models.Roadmap", b =>
+                {
+                    b.Navigation("Steps");
                 });
 
             modelBuilder.Entity("Server.Models.User", b =>
@@ -657,16 +1108,13 @@ namespace Server.Migrations
                     b.Navigation("ChatHistories");
 
                     b.Navigation("DailyProgresses");
+
+                    b.Navigation("Notifications");
                 });
 
             modelBuilder.Entity("Server.Models.Video", b =>
                 {
                     b.Navigation("Subtitles");
-                });
-
-            modelBuilder.Entity("System.Models.Roadmap", b =>
-                {
-                    b.Navigation("Steps");
                 });
 #pragma warning restore 612, 618
         }

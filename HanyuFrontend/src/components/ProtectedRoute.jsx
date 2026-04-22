@@ -1,17 +1,16 @@
-// có token mới cho vào trang dashboard
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 
-const ProtectedRoute = () => {
-  // Lấy token từ localStorage ra kiểm tra
+const ProtectedRoute = ({ allowRoles }) => {
   const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role"); 
 
-  // Nếu không có token ->  quay về trang chủ 
-  if (!token) {
-    return <Navigate to="/" replace />;
+  if (!token) return <Navigate to="/login" replace />;
+
+  if (allowRoles && !allowRoles.includes(role)) {
+    return <Navigate to="/" replace />; 
   }
 
-  // Nếu có token -> Cho vào
   return <Outlet />;
 };
 

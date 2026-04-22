@@ -1,65 +1,291 @@
-import React, { useState, useEffect } from 'react';
-import { HiX, HiOutlineVolumeUp, HiCheckCircle } from "react-icons/hi";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { 
+  HiOutlineLightningBolt, HiOutlineSearch, 
+  HiOutlineClock, HiOutlineBadgeCheck, HiChevronLeft
+} from "react-icons/hi";
 
-// Nhận filters và onBack (là cái callback setSelectedGame(null) từ Game.jsx)
-const SRSGame = ({ filters, onBack }) => { 
-  const [data, setData] = useState([]); 
-  const [currentIndex, setCurrentIndex] = useState(0);
+import FlashcardMode from "./FlashcardMode";
+
+export default function SRSGame({ onBack }) { 
+  const [vocabData, setVocabData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filterStep, setFilterStep] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isPracticeMode, setIsPracticeMode] = useState(false);
+
+  const [isOpen, setIsOpen] = useState(false);
+
+  const today = new Date().toISOString().split('T')[0]; 
 
   useEffect(() => {
-    // CHỖ NÀY: Sau này có Backend sẽ fetch data ở đây
-    // Hiện tại để mảng rỗng 
-    const fetchData = async () => {
-      try {
-        // Giả sử sau này: const res = await fetch('/api/srs'); const json = await res.json();
-        // setData(json);
-        setData([]); // Tạm thời để rỗng
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
-  // 1. Nếu đang tải
-  if (loading) {
-    return (
-      <div className="fixed inset-0 z-[110] bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
+  const fetchData = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.get(`http://localhost:5252/api/UserProgress/srs-list`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    console.log("Dữ liệu SRS từ Backend:", response.data); // <-- SOI Ở ĐÂY
+    setVocabData(response.data);
+  } catch (error) {
+    console.error("Lỗi fetch SRS:", error);
+  } finally {
+    setLoading(false);
   }
-
-  // 2. Nếu không có dữ liệu 
-  if (!data || data.length === 0) {
-    return (
-      <div className="fixed inset-0 z-[110] bg-white flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-          <HiX size={40} className="text-gray-400" />
-        </div>
-        <h2 className="text-2xl font-black text-gray-800 mb-2">CHƯA CÓ TỪ CẦN ÔN</h2>
-        <p className="text-gray-500 max-w-xs mb-8 font-medium">
-          Chưa kết nối được</p>
-        <button 
-          onClick={onBack} // Gọi hàm thoát từ Game.jsx truyền xuống
-          className="px-10 py-4 bg-gray-900 text-white rounded-[20px] font-black shadow-xl active:scale-95 transition-all"
-        >
-          QUAY LẠI SẢNH
-        </button>
-      </div>
-    );
-  }
-
-  // 3. Nếu có dữ liệu thì chạy
-  const currentWord = data[currentIndex];
-
-  return (
-    <div className="fixed inset-0 z-[110] bg-white flex flex-col items-center justify-center">
-       <h1 className="text-5xl font-black">{currentWord?.word}</h1>
-       {/* Code giao diện game... */}
-    </div>
-  );
 };
 
-export default SRSGame;
+  const getStatus = (date) => {
+    if (!date) return { label: "Mới", color: "bg-blue-100 text-blue-600", icon: HiOutlineBadgeCheck };
+    const formattedDate = date.split('T')[0];
+    if (formattedDate < today) return { label: "Quá hạn", color: "bg-red-100 text-red-600", icon: HiOutlineClock };
+    if (formattedDate === today) return { label: "Đến hạn", color: "bg-orange-100 text-orange-600", icon: HiOutlineLightningBolt };
+    return { label: "Đang nhớ", color: "bg-emerald-100 text-emerald-600", icon: HiOutlineBadgeCheck };
+  };
+
+  // Tạo mảng 9 cấp độ dựa trên dữ liệu thật
+const roadmapSteps = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(stepNum => {
+  // Lọc lấy những từ có stepId trùng với cột hiện tại
+  const count = vocabData.filter(v => {
+    const sId = v.stepId || v.StepId;
+    return Number(sId) === stepNum;
+  }).length;
+
+  return { step: stepNum, count: count };
+});
+
+
+
+  const filteredData = vocabData.filter(v => {
+  const currentStepId = v.stepId || v.StepId;
+  const matchesStep = filterStep === "all" || Number(currentStepId) === Number(filterStep);
+  
+  const vWord = v.word || v.Word || "";
+  const vMeaning = v.meaning || v.Meaning || "";
+  
+  const matchesSearch = vWord.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                        vMeaning.toLowerCase().includes(searchTerm.toLowerCase());
+  return matchesStep && matchesSearch;
+});
+
+  // Đếm số từ đến hạn hoặc quá hạn
+  const dueCount = vocabData.filter(v => v.next && v.next.split('T')[0] <= today).length;
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-black text-slate-400 uppercase tracking-widest animate-pulse">Đang đồng bộ SRS...</div>;
+
+  if (isPracticeMode) {
+    return (
+      
+      <FlashcardMode 
+        vocabList={vocabData.filter(v => v.next && v.next.split('T')[0] <= today)}
+        onFinish={() => {           
+          setIsPracticeMode(false); 
+          fetchData(); 
+        }} 
+      />
+    );
+  }
+
+  return (
+    <div className="relative min-h-screen pb-20 bg-white">
+      <div className="max-w-5xl mx-auto px-4 pt-16 space-y-6 md:space-y-8">
+        <button 
+          onClick={onBack} 
+          className="absolute left-4 top-4 z-[10] text-gray-400 hover:text-red-600 transition-all p-2 hover:bg-red-50 rounded-full shadow-lg bg-white border border-slate-100"
+        >
+          <HiChevronLeft size={32} />
+        </button>
+
+        {/* 📊 Dashboard Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2 bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 flex flex-col justify-between overflow-hidden relative group">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-slate-50 rounded-full blur-3xl" />
+            <div className="flex justify-between items-center mb-6 relative z-10">
+              <h2 className="font-black text-slate-800 uppercase text-[10px] tracking-[0.2em] flex items-center gap-2">
+                <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
+                Thống kê lộ trình
+              </h2>
+              <button 
+                onClick={() => dueCount > 0 && setIsPracticeMode(true)}
+                className="md:hidden flex items-center gap-2 bg-[#FF3B30] px-3 py-1.5 rounded-full shadow-lg active:scale-95 transition-all"
+              >
+                <span className="text-[10px] font-black text-white uppercase">Ôn tập</span>
+                <span className="bg-white text-[#FF3B30] text-[10px] font-black px-1.5 rounded-md">{dueCount}</span>
+              </button>
+            </div>
+
+            <div className="flex items-end justify-between h-32 md:h-36 px-2 md:px-6 relative z-10 border-b border-slate-100/50">
+  {roadmapSteps.map((item, index) => {
+    // LOGIC CAO DẦN:
+    // Cứ mỗi từ cộng thêm 6px chiều cao.
+    // Nếu chưa học (0 từ): chỉ cao 2px (mỏng dính sát sàn).
+    // Tối đa 120px để không bị vọt quá khung Dashboard.
+    const calculatedHeight = item.count > 0 ? (item.count * 0.2) + 10 : 2;
+    const finalHeight = Math.min(calculatedHeight, 120);
+
+    const barStyles = [
+      "from-rose-400 to-rose-500", "from-orange-400 to-orange-500", 
+      "from-amber-400 to-amber-500", "from-emerald-400 to-emerald-500", 
+      "from-teal-400 to-teal-500", "from-cyan-400 to-cyan-500", 
+      "from-sky-400 to-sky-500", "from-indigo-400 to-indigo-500", 
+      "from-purple-400 to-purple-500"
+    ];
+
+    return (
+      <div key={item.step} className="flex flex-col items-center group/bar flex-1 h-full justify-end relative">
+        <div className="relative w-full flex flex-col items-center">
+          
+          {/* SỐ TRÊN ĐẦU CỘT */}
+          {item.count > 0 && (
+            <span 
+              className="absolute text-[10px] font-black text-slate-700 bg-white border border-slate-100 px-1.5 py-0.5 rounded shadow-sm z-20"
+              style={{ bottom: `${finalHeight + 4}px` }} // Nhảy lên theo chiều cao cột
+            >
+              {item.count}
+            </span>
+          )}
+
+          {/* CỘT BIỂU ĐỒ - Dùng đơn vị PX để thấy sự tăng trưởng */}
+          <div 
+            className={`w-6 md:w-10 rounded-t-md transition-all duration-500 bg-gradient-to-t ${barStyles[index % barStyles.length]} relative shadow-sm group-hover/bar:brightness-110`}
+            style={{ 
+              height: `${finalHeight}px`, 
+              minHeight: '7px' // Chân đế cực mỏng khi chưa có từ
+            }}
+          >
+            <div className="absolute inset-x-0 top-0 h-1 bg-white/20 rounded-t-xl"></div>
+          </div>
+        </div>
+        
+        {/* NHÃN CẤP ĐỘ */}
+        <span className="mt-1 text-[9px] font-black text-slate-400 uppercase">lv{item.step}</span>
+      </div>
+    );
+  })}
+</div>
+          </div>
+
+          {/* Action Card PC */}
+          <div 
+            onClick={() => dueCount > 0 && setIsPracticeMode(true)}
+            className={`hidden md:flex relative w-full h-full rounded-[38px] flex-col items-center justify-center cursor-pointer group overflow-hidden shadow-lg transition-all duration-300 ${dueCount > 0 ? 'bg-[#FF3B30] hover:scale-[1.02] active:scale-95 shadow-red-500/20' : 'bg-slate-300 cursor-not-allowed'}`}
+          >
+            <div className="relative z-10 flex flex-col items-center text-center">
+              <span className="text-[9px] font-black text-white/50 uppercase tracking-[0.3em] mb-1">Cần ôn tập ngay</span>
+              <h1 className="text-4xl font-black text-white leading-none">{dueCount}</h1>
+              <h2 className="text-[11px] font-black text-white uppercase tracking-widest mt-2">Từ vựng</h2>
+            </div>
+          </div>
+        </div>
+
+        {/* 🎯 Filter & Search */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="relative min-w-[160px]">
+              <div className="relative min-w-[180px]">
+  {/* Button chính - Phẳng và Sạch */}
+  <button 
+    onClick={() => setIsOpen(!isOpen)}
+    className="w-full flex items-center justify-between bg-white border border-slate-200 px-4 py-2.5 rounded-xl transition-all active:bg-slate-50"
+  >
+    <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">
+      {filterStep === "all" ? "Tất cả bài học" : `Cấp độ S${filterStep}`}
+    </span>
+    <HiChevronLeft className={`transition-transform duration-200 text-slate-400 ${isOpen ? "-rotate-90" : "-rotate-180"}`} size={16} />
+  </button>
+
+  {/* Dropdown Menu - Phẳng, đổ bóng nhẹ */}
+  {isOpen && (
+    <>
+      <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)}></div>
+      
+      <div className="absolute top-full mt-1.5 w-full bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 overflow-hidden">
+        {/* Item: Tất cả */}
+        <button
+          onClick={() => { setFilterStep("all"); setIsOpen(false); }}
+          className={`w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider transition-colors ${filterStep === "all" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"}`}
+        >
+          Tất cả bài học
+        </button>
+
+        <div className="h-[1px] bg-slate-100 mx-2"></div>
+
+        {/* Danh sách Level */}
+        <div className="max-h-[220px] overflow-y-auto">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(s => (
+            <button
+              key={s}
+              onClick={() => { setFilterStep(s); setIsOpen(false); }}
+              className={`w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider transition-colors ${filterStep === s ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:bg-slate-50"}`}
+            >
+              Cấp độ {s}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  )}
+</div>
+            </div>
+            {/* <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+              {filteredData.length} từ
+            </span> */}
+          </div>
+
+          <div className="relative flex-1 md:max-w-xs">
+            <HiOutlineSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Tìm kiếm từ..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-100 rounded-full text-xs font-bold shadow-sm outline-none focus:ring-2 focus:ring-red-500/10" 
+            />
+          </div>
+        </div>
+
+        {/* 📚 Word List */}
+        <div className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm flex flex-col max-h-[500px]">
+          <div className="hidden md:grid grid-cols-12 px-8 py-4 bg-slate-50 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 border-b">
+            <div className="col-span-4">Từ vựng</div>
+            <div className="col-span-3">Ý nghĩa</div>
+            <div className="col-span-2 text-center">Cấp độ</div>
+            <div className="col-span-3 text-right">Trạng thái</div>
+          </div>
+
+          <div className="divide-y divide-slate-50 overflow-y-auto">
+            {filteredData.length > 0 ? filteredData.map((v, i) => {
+              const status = getStatus(v.next);
+              return (
+                <div key={i} className="flex md:grid md:grid-cols-12 items-center justify-between px-4 py-4 md:px-8 md:py-5 hover:bg-slate-50/50 transition-all cursor-pointer group">
+                  <div className="col-span-3 md:col-span-4 flex flex-col md:flex-row md:items-baseline md:gap-2 min-w-0">
+                    <h3 className="text-sm md:text-xl font-black text-slate-800 truncate">{v.word}</h3>
+                    <p className="text-[8px] md:text-[11px] text-slate-400 font-medium truncate lowercase">/{v.pinyin}/</p>
+                  </div>
+                  <div className="col-span-5 md:col-span-3 min-w-0 px-2">
+                    <p className="text-[11px] md:text-sm font-bold text-slate-600 truncate">{v.meaning}</p>
+                  </div>
+                 <div className="hidden md:block md:col-span-2 text-center">
+                    <span className="text-[9px] font-black bg-slate-100 px-2 py-1 rounded text-slate-500">
+                      Lv {String(v.stepId || v.StepId || "1")}
+                    </span>
+                  </div>
+                  <div className="md:col-span-3 flex justify-end">
+                    <div className={`flex items-center gap-2 px-3 py-1.5 md:px-4 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-wider ${status.color}`}>
+                      <status.icon size={12} className="hidden md:block" />
+                      {status.label}
+                    </div>
+                  </div>
+                </div>
+              );
+            }) : (
+              <div className="py-20 text-center font-black text-slate-300 uppercase tracking-widest">Không có dữ liệu phù hợp</div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

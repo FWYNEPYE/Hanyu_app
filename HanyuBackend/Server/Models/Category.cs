@@ -14,7 +14,9 @@ namespace Server.Models
         public string CategoryType { get; set; } = "system"; 
 
   
-        public bool IsPublic { get; set; } = false; // User cho phép chia sẻ bộ này
+        public bool IsPublic { get; set; } = false; 
+        public bool IsPending { get; set; } = false; 
+        public bool IsLocked { get; set; } = false;
         public int Price { get; set; } = 0; // Giá (point) 
 
         public int Version { get; set; } = 1;
@@ -34,5 +36,6 @@ namespace Server.Models
         public virtual User? User { get; set; }
 
         public virtual ICollection<Vocabulary> Vocabularies { get; set; } = new List<Vocabulary>();
+        public virtual ICollection<RoadmapStep> RoadmapSteps { get; set; } = new List<RoadmapStep>();
     }
 }

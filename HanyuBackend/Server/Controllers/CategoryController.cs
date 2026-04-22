@@ -89,21 +89,12 @@ namespace Server.Controllers
             }
         }
                 
-        
-[HttpGet("user/{userId}")]
+ [HttpGet("user/{userId}")]
 public async Task<IActionResult> GetUserCategories(int userId)
 {
-    //  Lấy tất cả bộ từ liên quan đến User này
-    var myCategoriesQuery = _context.Categories
-        .Where(c => c.UserID == userId);
-
-    var borrowedQuery = _context.UserCategories
-        .Where(uc => uc.UserID == userId && uc.Category.UserID != userId)
-        .Select(uc => uc.Category);
-
-
-    var allCategories = await myCategoriesQuery
-        .Union(borrowedQuery)
+    // 1. Lấy các bộ từ do chính User này tạo ra
+    var myCategories = await _context.Categories
+        .Where(c => c.UserID == userId)
         .Select(c => new {
             c.CategoryID,
             c.CategoryName,
@@ -116,16 +107,34 @@ public async Task<IActionResult> GetUserCategories(int userId)
             c.ColorClass,
             c.Tags,
             c.IsPublic,
-            // Đếm số từ thực tế đang có trong từng bộ
+            IsBorrowed = false, // Đánh dấu: Đồ chính chủ
             Words = _context.Vocabularies.Count(v => v.CategoryID == c.CategoryID)
         })
         .ToListAsync();
 
-    var result = allCategories
-        .GroupBy(c => c.ParentCategoryID ?? c.CategoryID)
-        .Select(g => g.First())
-        .ToList();
+    // 2. Lấy các bộ từ đi mượn từ cộng đồng (qua bảng UserCategories)
+    // Loại trừ những bộ mà UserID của bộ đó trùng với userId hiện tại để tránh bị lặp
+    var borrowedCategories = await _context.UserCategories
+        .Where(uc => uc.UserID == userId && uc.Category.UserID != userId)
+        .Select(uc => new {
+            uc.Category.CategoryID,
+            uc.Category.CategoryName,
+            uc.Category.CategoryType,
+            uc.Category.UserID,
+            uc.Category.ParentCategoryID,
+            uc.Category.Version,
+            uc.Category.Description,
+            uc.Category.IconName,
+            uc.Category.ColorClass,
+            uc.Category.Tags,
+            uc.Category.IsPublic,
+            IsBorrowed = true, // Đánh dấu: Đồ cộng đồng
+            Words = _context.Vocabularies.Count(v => v.CategoryID == uc.Category.CategoryID)
+        })
+        .ToListAsync();
 
+    // 3. Gộp lại và trả về
+    var result = myCategories.Concat(borrowedCategories).ToList();
     return Ok(result);
 }
 
@@ -205,7 +214,7 @@ public async Task<IActionResult> GetUserCategories(int userId)
                     var isOwned = await _context.UserCategories
                         .AnyAsync(uc => uc.UserID == req.UserID && uc.CategoryID == req.CategoryID);
 
-                    if (isOwned) return BadRequest(new { message = "Sếp đã sở hữu bộ này rồi, chỉ có thể cập nhật thôi!" });
+                    if (isOwned) return BadRequest(new { message = "Đã sở hữu bộ này rồi, chỉ có thể cập nhật thôi!" });
 
                     var originalCate = await _context.Categories.FindAsync(req.CategoryID);
                     if (originalCate == null) return NotFound(new { message = "Bộ từ không tồn tại" });
@@ -234,7 +243,7 @@ public async Task<IActionResult> GetUserCategories(int userId)
                         .Include(uc => uc.Category)
                         .FirstOrDefaultAsync(uc => uc.UserID == req.UserID && uc.CategoryID == req.CategoryID);
 
-                    if (userLink == null) return NotFound(new { message = "Sếp chưa sở hữu bộ này!" });
+                    if (userLink == null) return NotFound(new { message = "Chưa sở hữu bộ này!" });
 
                     // Check version
                     if (userLink.Category.Version > userLink.SavedVersion)
@@ -244,7 +253,7 @@ public async Task<IActionResult> GetUserCategories(int userId)
                         int pointPrice = (userLink.Category.Version - userLink.SavedVersion) * 10;
 
                         if (user.Points < pointPrice) 
-                            return BadRequest(new { message = $"Sếp thiếu {pointPrice} point để cập nhật!" });
+                            return BadRequest(new { message = $"Thiếu {pointPrice} point để cập nhật!" });
 
                         // Trừ point và đồng bộ version
                         user.Points -= pointPrice;
@@ -254,7 +263,7 @@ public async Task<IActionResult> GetUserCategories(int userId)
                         return Ok(new { message = "Cập nhật thành công!", newVersion = userLink.SavedVersion });
                     }
 
-                    return BadRequest(new { message = "Đã là bản mới nhất rồi sếp!" });
+                    return BadRequest(new { message = "Đã là bản mới nhất rồi!" });
                 }
 
 
@@ -283,7 +292,7 @@ public async Task<IActionResult> GetUserCategories(int userId)
             }
 
             if (user.Points < updateCost)
-                return BadRequest(new { message = $"Sếp cần {updateCost} Point để cập nhật thêm {newWordsCount} từ mới!" });
+                return BadRequest(new { message = $"Cần {updateCost} Point để cập nhật thêm {newWordsCount} từ mới!" });
 
             user.Points -= updateCost;
             

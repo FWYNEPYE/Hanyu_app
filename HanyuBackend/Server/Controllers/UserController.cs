@@ -123,65 +123,78 @@ namespace Server.Controllers
        
        
 
-       [HttpPost("add-points")]
-public async Task<IActionResult> AddPoints([FromBody] AddPointsDto data) // Dùng class DTO ở đây
-{
-    try
-    {
-        var user = await GetCurrentUserAsync();
-        if (user == null) return NotFound(new { message = "Không tìm thấy User!" });
-
-        // Cộng điểm từ data.PointsToAdd
-        user.Points += data.PointsToAdd;
-        
-        await _context.SaveChangesAsync();
-
-        return Ok(new { 
-            message = $"Đã cộng {data.PointsToAdd} điểm!", 
-            currentPoints = user.Points 
-        });
-    }
-    catch (Exception ex)
-    {
-        return StatusCode(500, new { message = "Lỗi khi cộng điểm!", error = ex.Message });
-    }
-}
-
-
-
-[HttpPost("exchange-credits")]
-public async Task<IActionResult> ExchangeCredits([FromBody] ExchangeDto data)
-{
-    try 
-    {
-        var user = await GetCurrentUserAsync();
-        if (user == null) return NotFound(new { message = "User không tồn tại" });
-
-        // Kiểm tra xem data có bị null không (nếu lỗi map dữ liệu)
-        if (data == null) return BadRequest(new { message = "Dữ liệu gửi lên không hợp lệ" });
-
-        if (user.Points < data.Cost) 
+        [HttpPost("add-points")]
+        public async Task<IActionResult> AddPoints([FromBody] AddPointsDto data) 
         {
-            return BadRequest(new { message = "Mày chưa đủ điểm, học tiếp đi!" });
+            try
+            {
+                var user = await GetCurrentUserAsync();
+                if (user == null) return NotFound(new { message = "Không tìm thấy User!" });
+
+                // 1. Cộng điểm
+                user.Points += data.PointsToAdd;
+
+                // 2. Tự động tạo thông báo lưu vào lịch sử
+                var notification = new Notification
+                {
+                    UserID = user.UserID,
+                    Type = "Chuỗi", // Gắn nhãn là Streak cho rực cháy
+                    Title = "Duy trì phong độ! 🔥",
+                    Content = $"Diu vừa nhận được {data.PointsToAdd} ☀️ vì đã chăm chỉ học tập. Tiếp tục phát huy nhé!",
+                    CreatedAt = DateTime.Now,
+                    IsRead = false
+                };
+                
+                _context.Notifications.Add(notification);
+
+                // 3. Lưu tất cả vào Database
+                await _context.SaveChangesAsync();
+
+                return Ok(new { 
+                    message = $"Đã cộng {data.PointsToAdd} điểm và tạo thông báo!", 
+                    currentPoints = user.Points 
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi khi cộng điểm!", error = ex.Message });
+            }
         }
 
-        // Thực hiện trừ điểm và cộng lượt
-        user.Points -= data.Cost;
-        user.AvailableAIUsage += data.Amount;
 
-        await _context.SaveChangesAsync();
-        
-        return Ok(new { 
-            message = "Đổi quà thành công!", 
-            points = user.Points, 
-            credits = user.AvailableAIUsage 
-        });
-    }
-    catch (Exception ex)
-    {
-        return StatusCode(500, new { message = "Lỗi server!", error = ex.Message });
-    }
-}
+        [HttpPost("exchange-credits")]
+        public async Task<IActionResult> ExchangeCredits([FromBody] ExchangeDto data)
+        {
+            try 
+            {
+                var user = await GetCurrentUserAsync();
+                if (user == null) return NotFound(new { message = "User không tồn tại" });
+
+                // Kiểm tra xem data có bị null không (nếu lỗi map dữ liệu)
+                if (data == null) return BadRequest(new { message = "Dữ liệu gửi lên không hợp lệ" });
+
+                if (user.Points < data.Cost) 
+                {
+                    return BadRequest(new { message = "Mày chưa đủ điểm, học tiếp đi!" });
+                }
+
+                // Thực hiện trừ điểm và cộng lượt
+                user.Points -= data.Cost;
+                user.AvailableAIUsage += data.Amount;
+
+                await _context.SaveChangesAsync();
+                
+                return Ok(new { 
+                    message = "Đổi quà thành công!", 
+                    points = user.Points, 
+                    credits = user.AvailableAIUsage 
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi server!", error = ex.Message });
+            }
+        }
 
 
 

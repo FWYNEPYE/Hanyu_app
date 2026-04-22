@@ -26,22 +26,20 @@ namespace Server.Controllers
         }
 
         // 2. Lọc từ theo bộ (Dùng cho Game)
-        [HttpGet("filter")]
-        public async Task<ActionResult<IEnumerable<Vocabulary>>> GetFiltered([FromQuery] string categoryId)
-        {
-            // Chỉ lấy từ vựng thuộc về CategoryID mà User chọn 
-            // Và Category đó phải có Type là user
-            var query = _context.Vocabularies
-                .Include(v => v.Category)
-                .Where(v => v.CategoryID == categoryId && v.Category.CategoryType == "user");
+        // Lọc từ theo bộ (Dùng cho Game)
+[HttpGet("category/{categoryId}")] // Route này rõ ràng: api/Vocabulary/category/id_cua_sep
+public async Task<ActionResult<IEnumerable<Vocabulary>>> GetByCategory(string categoryId)
+{
+    var result = await _context.Vocabularies
+        .Include(v => v.Category)
+        .Where(v => v.CategoryID == categoryId) 
+        .ToListAsync();
+    
+    if (result == null) return NotFound(); 
+   
 
-            var result = await query.ToListAsync();
-            
-            if (!result.Any()) 
-                return BadRequest(new { message = "Bộ từ này chưa có từ nào, hãy thêm từ để chơi game!" });
-
-            return Ok(result);
-        }
+    return Ok(result);
+}
      
 
         [HttpPost]

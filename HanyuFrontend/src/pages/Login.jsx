@@ -1,102 +1,105 @@
-import React, {useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGoogleLogin } from '@react-oauth/google'; 
 import axios from 'axios';
+import { HiLockClosed, HiUser } from "react-icons/hi";
 
 const Login = () => {
   const navigate = useNavigate();
+  const [formData, setFormData] = useState({ username: '', password: '' });
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    // Nếu có token rồi sang dashboard, khỏi login
-    navigate('/dashboard', { replace: true }); 
-  }
-}, [navigate]);
+    const token = localStorage.getItem("token");
+    if (token) {
+      navigate('/admin-portal', { replace: true });
+    }
+  }, [navigate]);
 
-  // Logic xử lý sau khi Google cấp quyền thành công
-  const login = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      console.log("Google Token:", tokenResponse);
+  const handleAdminLogin = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      const res = await axios.post("http://localhost:5252/api/auth/admin-login", formData);
+
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("userId", res.data.userId);
+      localStorage.setItem("username", res.data.username); 
+      localStorage.setItem("role", "Admin"); 
       
-      try {
-        // 1. Lấy thông tin user từ Google
-        const userInfo = await axios.get(
-          'https://www.googleapis.com/oauth2/v3/userinfo',
-          { headers: { Authorization: `Bearer ${tokenResponse.access_token}` } }
-        );
-
-        // 2. Gửi dữ liệu sang Backend .NET của mày
-        const res = await axios.post("http://localhost:5252/api/auth/google-login", {
-          Email: userInfo.data.email,
-          Name: userInfo.data.name,
-          GoogleId: userInfo.data.sub,
-          PhotoUrl: userInfo.data.picture
-        });
-
-        // 3. Lưu lại token
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("userId", res.data.userId);
-        
-        // 4. Bay vào Dashboard
-        navigate('/dashboard');
-      } catch (err) {
-        console.error("Lỗi đăng nhập:", err);
-        alert("Đm lỗi rồi, check lại Backend hoặc Client ID đi!");
-      }
-    },
-    onError: () => console.log('Login Failed'),
-  });
+      navigate('/admin-portal'); 
+      
+    } catch (err) {
+      console.error("Lỗi đăng nhập Admin:", err);
+      alert("Sai tài khoản hoặc mật khẩu rồi sếp ơi!");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div 
-        className="fixed inset-0 w-screen h-screen flex flex-col items-center justify-center font-sans overflow-hidden bg-no-repeat bg-center bg-[length:100%_100%]"
-        style={{ backgroundImage: "url('/bglogin.png')" }}>
+      className="fixed inset-0 w-screen h-screen flex flex-col items-center justify-center font-sans overflow-hidden"
+      style={{ backgroundImage: "url('/bglogin.png')", backgroundSize: '' }}>
       
-      <div className="absolute inset-0 bg-white/20 backdrop-blur-[2px] z-0"></div>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[4px] z-0"></div>
 
       <div className="relative z-10 flex flex-col items-center w-full">
-        {/* Logo Section */}
-        <div className="mb-8 sm:mb-10 group cursor-pointer relative">
-          <div className="bg-white w-20 h-20 sm:w-24 sm:h-24 rounded-[28px] 
-                        shadow-[0_15px_35px_rgba(0,0,0,0.15)] 
-                        flex items-center justify-center overflow-hidden border border-gray-100 
-                        group-hover:-translate-y-1 transition-all duration-300">
-            <img src="/logoo.png" alt="Logo" className="w-full h-full object-cover" />
+        {/* Logo */}
+        <div className="mb-8 group">
+          <div className="bg-white w-20 h-20 rounded-[28px] shadow-2xl flex items-center justify-center overflow-hidden border-2 border-white transition-all duration-300">
+            <img src="/hehe.png" alt="Logo" className="w-full h-full object-cover" />
           </div>
         </div>
 
         {/* Login Card */}
-        <div className="bg-white w-full max-w-[340px] sm:max-w-[400px] rounded-[40px] sm:rounded-[45px] p-8 sm:p-10 
-                      shadow-[0_20px_50px_rgba(0,0,0,0.12),0_40px_80px_rgba(0,0,0,0.18)] 
-                      border border-white/50 text-center transition-all">
+        <div className="bg-white/90 backdrop-blur-md w-full max-w-[380px] rounded-[40px] p-10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/20">
           
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#2d3436] mb-2 tracking-tight leading-tight">
-            Đăng nhập
-          </h1>
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-black text-[#2d3436] tracking-tight">ADMIN </h1>
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">Hệ thống quản trị</p>
+          </div>
 
-          <p className="text-gray-400 text-[14px] sm:text-sm mb-10 font-normal leading-relaxed">
-            Dậy học ngay đê!!!
-          </p>
+          <form onSubmit={handleAdminLogin} className="space-y-5">
+            {/* Username */}
+            <div className="relative">
+              <HiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input 
+                type="text"
+                required
+                placeholder="Tên đăng nhập"
+                className="w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-[#ff416c] focus:bg-white outline-none transition-all text-sm font-bold"
+                onChange={(e) => setFormData({...formData, username: e.target.value})}
+              />
+            </div>
 
-          {/* nút đăng nhập bằng gg */}
+            {/* Password */}
+            <div className="relative">
+              <HiLockClosed className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input 
+                type="password"
+                required
+                placeholder="Mật khẩu"
+                className="w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-[#ff416c] focus:bg-white outline-none transition-all text-sm font-bold"
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+              />
+            </div>
+
+            <button 
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-4 bg-gradient-to-r from-[#ff416c] to-[#ff4b2b] text-white rounded-2xl font-black text-sm shadow-lg shadow-pink-200 hover:shadow-pink-300 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50"
+            >
+              {isLoading ? "ĐANG XÁC THỰC..." : "ĐĂNG NHẬP"}
+            </button>
+          </form>
+
           <button 
-            onClick={() => login()} 
-            className="w-full flex items-center justify-center space-x-3 
-                     bg-white border-2 border-gray-50 py-3 sm:py-3.5 rounded-2xl 
-                     shadow-[0_5px_0_0_rgba(82,184,72,1)] 
-                     hover:shadow-[0_7px_0_0_rgba(82,184,72,1)] 
-                     hover:-translate-y-1 transition-all duration-300 
-                     active:shadow-[0_2px_0_0_rgba(82,184,72,1)] active:translate-y-0.5 group"
+            onClick={() => navigate('/')}
+            className="mt-6 w-full text-gray-400 text-xs font-bold hover:text-gray-600 transition-colors"
           >
-            <img src="https://www.svgrepo.com/show/355037/google.svg" className="w-5 h-5" alt="Google" />
-            <span className="text-[#2d3436] font-bold text-sm sm:text-base">Tiếp tục với Google</span>
+            QUAY LẠI TRANG CHỦ
           </button>
-
-          <p className="mt-8 sm:mt-10 text-gray-500 text-sm sm:text-base leading-relaxed">
-                Đã đăng nhập vào đây là phải 
-                <span className="text-blue-600 font-extrabold ml-1"> HỌC</span>
-            </p>
         </div>
       </div>
     </div>

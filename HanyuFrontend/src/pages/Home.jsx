@@ -54,7 +54,12 @@ const Home = () => {
         navigate('/dashboard');
       } catch (err) {
         console.error("Lỗi đăng nhập:", err);
-        alert("Ốiiiiiii, bị lỗi rồi!");
+        if (err.response && err.response.data) {
+          // Nếu Backend gửi về chuỗi "Tài khoản của bạn đã bị khóa...", alert sẽ hiện đúng câu đó
+          alert(err.response.data); 
+        } else {
+          alert("Ốiiiiiii, đăng nhập không được sếp ơi!");
+        }
       }
     },
     onError: () => console.log('Login Failed'),
@@ -70,7 +75,7 @@ const Home = () => {
         <nav className="fixed top-0 w-full bg-white/90 backdrop-blur-md z-40 border-b border-gray-100 px-4 md:px-8 py-3 md:py-4 flex justify-between items-center shadow-sm">
           <div className="flex items-center gap-2 shrink-0">
             <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-md overflow-hidden">
-              <img src="/logoo.png" alt="Logo" className="w-full h-full object-cover" />
+              <img src="/hehe.png" alt="Logo" className="w-full h-full object-cover" />
             </div>
             <span className="font-black text-lg md:text-xl tracking-tighter uppercase">Hanyu</span>
           </div>
@@ -111,7 +116,7 @@ const Home = () => {
             <div className="w-20 h-1.5 bg-red-600 mx-auto rounded-full"></div>
           </div>
 
-          {/* HÀNG TRÊN: 3 CARD  */}
+          {/* HÀNG TRÊN  */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             {/* Tra từ vựng */}
             <div className="p-8 bg-[#fff5f5] rounded-[40px] border border-gray-50 hover:shadow-2xl hover:shadow-red-100 transition-all group">
@@ -141,7 +146,7 @@ const Home = () => {
             </div>
           </div>
 
-          {/* HÀNG DƯỚI: 3 CARD */}
+          {/* HÀNG DƯỚI */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Hội thoại AI */}
             <div className="p-8 bg-[#e7f5ff] rounded-[40px] border border-gray-50 hover:shadow-2xl hover:shadow-blue-100 transition-all group">

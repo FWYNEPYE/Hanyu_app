@@ -39,7 +39,7 @@ const VideoLearning = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     
     const [isSelectingGroup, setIsSelectingGroup] = useState(false);
-    const [vocabGroups, setVocabGroups] = useState([]); // Chứa danh sách bộ từ
+    const [vocabGroups, setVocabGroups] = useState([]); 
     const [newGroupName, setNewGroupName] = useState("");
 
 
@@ -155,10 +155,9 @@ const VideoLearning = () => {
         try {
             const res = await axios.post(`http://localhost:5252/api/Category`, { 
                 categoryName: newGroupName,
-                userID: parseInt(currentUserId), // Bắt buộc ép kiểu sang Int cho khớp .NET
+                userID: parseInt(currentUserId), 
                 categoryType: "user"
             });
-            // Sau khi tạo xong, nên load lại danh sách cho chắc
             fetchVocabGroups(); 
             setNewGroupName("");
         } catch (err) { console.error("Lỗi tạo bộ từ:", err); }
@@ -171,13 +170,12 @@ const VideoLearning = () => {
 
         try {
             const payload = {
-                // Khớp chính xác với các Property trong class Vocabulary
                 hanzi: activeWord.char || activeWord.text,
                 pinyin: activeWord.pinyin,
                 meaning: activeWord.vi || activeWord.mean || "Chưa có nghĩa",
                 type: "Video_Learning", 
                 level: 1, 
-                categoryID: groupId, // Lưu ý: CategoryID ở Backend là string
+                categoryID: groupId,
                 note: "Lưu từ video"
             };
 
@@ -268,7 +266,7 @@ const VideoLearning = () => {
         try {
             const formData = new FormData();
             formData.append("Title", newTitle);
-            formData.append("VideoType", addTab); // 'youtube' hoặc 'local'
+            formData.append("VideoType", addTab); 
 
             if (addTab === 'youtube') {
                 formData.append("UrlOrPath", newUrl);

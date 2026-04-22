@@ -35,6 +35,16 @@ public async Task<IActionResult> GetRoadmapDetail(string slug)
         .Select(up => up.RoadmapStepId)
         .ToListAsync();
 
+    // Lấy danh sách CategoryID có trong Roadmap này
+    var categoryIds = roadmap.Steps.Select(s => s.CategoryID).ToList();
+
+    // Đếm số từ vựng cho mỗi CategoryID (Group by để tối ưu, không cần chạy vòng lặp gọi DB nhiều lần)
+    var vocabCounts = await _context.Vocabularies
+        .Where(v => categoryIds.Contains(v.CategoryID))
+        .GroupBy(v => v.CategoryID)
+        .Select(g => new { CategoryID = g.Key, Count = g.Count() })
+        .ToDictionaryAsync(x => x.CategoryID, x => x.Count);
+
     var roadmapSteps = roadmap.Steps.OrderBy(s => s.Order).ToList();
     
     var steps = roadmapSteps.Select((s, index) => 
@@ -44,7 +54,6 @@ public async Task<IActionResult> GetRoadmapDetail(string slug)
         {
             status = "done";
         }
-        // Nếu là bài đầu tiên (index 0) HOẶC bài trước đó đã hoàn thành thì cho phép "open"
         else if (index == 0 || completedStepIds.Contains(roadmapSteps[index - 1].StepId))
         {
             status = "open"; 
@@ -60,40 +69,48 @@ public async Task<IActionResult> GetRoadmapDetail(string slug)
             s.Title,
             s.Description,
             s.CategoryID,
+            // Nếu không tìm thấy CategoryID trong từ điển thì để là 0
+            VocabCount = vocabCounts.ContainsKey(s.CategoryID) ? vocabCounts[s.CategoryID] : 0,
             Status = status
         };
     });
 
     return Ok(new { roadmap.Title, roadmap.Description, Steps = steps });
 }
-
        
         [HttpGet("step-vocab/{stepId}")]
-        public async Task<IActionResult> GetVocabByStep(int stepId)
-        {
-            var step = await _context.RoadmapSteps
-                .FirstOrDefaultAsync(s => s.StepId == stepId);
+public async Task<IActionResult> GetVocabByStep(int stepId)
+{
+    var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    int userId = string.IsNullOrEmpty(userIdClaim) ? 0 : int.Parse(userIdClaim);
 
-            if (step == null) return NotFound(new { message = "Không tìm thấy bài học" });
-            if (string.IsNullOrEmpty(step.CategoryID)) return Ok(new List<object>());
+    var step = await _context.RoadmapSteps.FirstOrDefaultAsync(s => s.StepId == stepId);
+    if (step == null) return NotFound(new { message = "Không tìm thấy bài học" });
 
-            // Lấy từ vựng dựa trên CategoryId 
-            var vocabs = await _context.Vocabularies
-                .Where(v => v.CategoryID == step.CategoryID)
-                .Select(v => new {
-                    v.VocaId,
-                    v.Hanzi,
-                    v.Pinyin,
-                    v.Meaning,
-                    v.Type,
-                    v.Example,
-                    v.ExampleMeaning,
-                    
-                })
-                .ToListAsync();
+    // Lấy danh sách từ vựng
+    var vocabs = await _context.Vocabularies
+        .Where(v => v.CategoryID == step.CategoryID)
+        .ToListAsync();
 
-            return Ok(vocabs);
-        }
+    // Lấy danh sách ID những từ user ĐÃ THUỘC (có trong bảng SRS)
+    var savedVocaIds = await _context.UserVocaProgresses
+        .Where(uvp => uvp.UserID == userId && uvp.IsSaved)
+        .Select(uvp => uvp.VocaId)
+        .ToListAsync();
+
+    var result = vocabs.Select(v => new {
+        v.VocaId,
+        v.Hanzi,
+        v.Pinyin,
+        v.Meaning,
+        v.Type,
+        v.Example,
+        v.ExampleMeaning,
+        IsSaved = savedVocaIds.Contains(v.VocaId) // Trả về true/false cho Frontend
+    });
+
+    return Ok(result);
+}
 
         
         [HttpPost("complete-step/{stepId}")]

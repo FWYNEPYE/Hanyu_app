@@ -5,3 +5,24 @@
   .backface-hidden { backface-visibility: hidden; }
   .rotate-y-180 { transform: rotateY(180deg); }
 }
+
+/* Định dạng thanh cuộn riêng cho class .custom-scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px; /* Độ rộng thanh cuộn */
+}
+
+/* Phần nền của thanh cuộn */
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #0B0F1A; /* Màu trùng với background của sếp */
+}
+
+/* Phần cục kéo (thumb) */
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #1E2533; /* Màu xám đậm */
+  border-radius: 10px;
+}
+
+/* Khi sếp di chuột vào cục kéo thì nó sáng lên chút */
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #2563EB; /* Màu xanh Blue giống theme của sếp */
+}

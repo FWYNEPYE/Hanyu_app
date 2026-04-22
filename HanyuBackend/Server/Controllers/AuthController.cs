@@ -23,12 +23,10 @@ public class AuthController : ControllerBase
     [HttpPost("google-login")]
     public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginDto data)
     {
-        //  Kiểm tra User tồn tại chưa qua Email
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == data.Email);
 
         if (user == null)
         {
-            //  Nếu chưa  -> Tạo mới
             user = new User 
             {
                 Username = data.Name,
@@ -36,23 +34,28 @@ public class AuthController : ControllerBase
                 GoogleId = data.GoogleId,
                 CurrentStreak = 0,
                 LongestStreak = 0,
-                Points = 200,      // Mặc định 200 point
+                Points = 200,
                 AvailableAIUsage = 10,
                 AvatarUrl = data.PhotoUrl,
                 CreatedAt = DateTime.Now,
-                PasswordHash = null//  để null vì dùng Google
+                IsActive = true 
             };
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
         }
-        else {
+        else 
+        {
+            if (!user.IsActive)
+            {
+                return BadRequest("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ để được hỗ trợ!");
+            }
 
             if (string.IsNullOrEmpty(user.AvatarUrl) || user.AvatarUrl.Contains("googleusercontent.com")) {
                 user.AvatarUrl = data.PhotoUrl;
                 await _context.SaveChangesAsync();
             }
         }
-        //  Tạo Token JWT
+
         var token = CreateToken(user);
 
         return Ok(new { 
@@ -62,18 +65,44 @@ public class AuthController : ControllerBase
         });
     }
 
+    [HttpPost("admin-login")]
+    public async Task<IActionResult> AdminLogin([FromBody] AdminLoginDto model)
+    {
+        if (model.Username == "admin" && model.Password == "abc1234")
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == "admin");
+
+            if (user == null) return NotFound("Chưa tạo user admin trong SQL!");
+        
+            if (user.Role != "admin") {
+                user.Role = "admin";
+                await _context.SaveChangesAsync();
+            }
+
+            var token = CreateToken(user); 
+
+            return Ok(new { 
+                token = token, 
+                userId = user.UserID,
+                username = user.Username 
+            });
+        }
+        return Unauthorized("Mày không phải Sếp, cúc!");
+    }
+
+
+    // Hợp nhất hàm tạo Token, dùng chung cho cả Google và Admin
     private string CreateToken(User user)
     {
-        // Lấy chìa khóa bí mật từ appsettings.json
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
             _config.GetSection("AppSettings:Token").Value!));
 
-        // Thông tin định danh trong Token
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Name, user.Username)
+            new Claim(ClaimTypes.Email, user.Email ?? ""),
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.Role, user.Role ?? "user")
         };
 
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
@@ -81,7 +110,7 @@ public class AuthController : ControllerBase
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.Now.AddDays(7), // Token hạn 7 ngày
+            Expires = DateTime.Now.AddDays(7),
             SigningCredentials = creds
         };
 
@@ -90,4 +119,17 @@ public class AuthController : ControllerBase
 
         return tokenHandler.WriteToken(token);
     }
+}
+
+// DTOs
+public class GoogleLoginDto {
+    public string Email { get; set; }
+    public string Name { get; set; }
+    public string GoogleId { get; set; }
+    public string PhotoUrl { get; set; }
+}
+
+public class AdminLoginDto {
+    public string Username { get; set; }
+    public string Password { get; set; }
 }

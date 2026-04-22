@@ -89,13 +89,12 @@ namespace Server.Controllers
 
                 var aiRawResponse = await _aiService.GetFullAIResponse(prompt);
 
-              // 5. BÓC TÁCH CHUẨN: Vì Groq trả về nguyên một Object lớn
+             
                 string cleanJson = "";
                 try 
                 {
                     using (JsonDocument doc = JsonDocument.Parse(aiRawResponse))
                     {
-                        // Đào sâu vào cấu trúc của Groq: choices -> [0] -> message -> content
                         if (doc.RootElement.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
                         {
                             cleanJson = choices[0].GetProperty("message").GetProperty("content").GetString() ?? "";

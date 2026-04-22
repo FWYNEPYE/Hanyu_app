@@ -17,24 +17,30 @@ const AIChat = ({ currentPage }) => {
   const scrollRef = useRef(null);
 
   // ---  LỊCH SỬ ---
-  useEffect(() => {
-    const loadInitialHistory = async () => {
-        const currentUserId = localStorage.getItem("userId") || 7;
-        try {
-            // GỌI ĐÚNG ID CỦA USER
-            const response = await fetch(`http://localhost:5252/api/AI/history/${currentUserId}`); 
-            if (response.ok) {
-                const data = await response.json();
-                if(data.length > 0) {
-                   setMessages(data.map(m => ({
-                     id: m.id, role: m.role, text: m.content, pinyin: m.pinyin, translation: m.translation
-                   })));
-                }
+const loadChatHistory = async () => {
+    const currentUserId = localStorage.getItem("userId") || 7;
+    try {
+        const response = await fetch(`http://localhost:5252/api/AI/history/${currentUserId}`); 
+        if (response.ok) {
+            const data = await response.json();
+            if(data.length > 0) {
+               setMessages(data.map(m => ({
+                 id: m.id, 
+                 role: m.role.toLowerCase(), 
+                 text: m.content, 
+                 pinyin: m.pinyin, 
+                 translation: m.translation
+               })));
             }
-        } catch (e) { console.log("Chưa có lịch sử cũ"); }
-    };
-    loadInitialHistory();
+        }
+    } catch (e) { console.log("Lỗi khi load lịch sử"); }
+};
+
+useEffect(() => {
+    loadChatHistory();
 }, []);
+
+
 
   // --- GỢI Ý THEO TRANG ---
   useEffect(() => {
