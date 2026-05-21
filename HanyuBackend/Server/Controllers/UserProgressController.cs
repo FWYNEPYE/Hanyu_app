@@ -9,7 +9,7 @@ namespace Server.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class UserProgressController : ControllerBase
-    {
+    { 
         private readonly AppDbContext _context;
 
         public UserProgressController(AppDbContext context)
@@ -115,18 +115,19 @@ namespace Server.Controllers
             {
                 case "easy":
                     progress.CurrentLevel += 1;
+                    // Công thức giãn cách ngày học 
                     progress.NextReview = DateTime.Now.AddDays(Math.Pow(2, progress.CurrentLevel)); 
                     break;
                 case "normal":
                     progress.NextReview = DateTime.Now.AddDays(progress.CurrentLevel + 1);
                     break;
                 case "hard":
-                    progress.CurrentLevel = 1;
+                    progress.CurrentLevel = 1; // Reset về cấp độ 1 nếu quên
                     progress.NextReview = DateTime.Now.AddDays(1);
                     break;
             }
 
-            if (progress.CurrentLevel > 5) progress.CurrentLevel = 5;
+            if (progress.CurrentLevel > 8) progress.CurrentLevel = 8;
 
             await _context.SaveChangesAsync();
             return Ok(new { nextReview = progress.NextReview, newLevel = progress.CurrentLevel });
@@ -140,21 +141,26 @@ namespace Server.Controllers
             int userId = int.Parse(userIdClaim);
 
             var list = await _context.UserVocaProgresses
-        .Include(uvp => uvp.Vocabulary)
-        .Where(uvp => uvp.UserID == userId && uvp.IsSaved == true)
-        .Select(uvp => new
-        {
-            vocaId = uvp.VocaId,
-            word = uvp.Vocabulary != null ? uvp.Vocabulary.Hanzi : "",
-            meaning = uvp.Vocabulary != null ? uvp.Vocabulary.Meaning : "",
-            pinyin = uvp.Vocabulary != null ? uvp.Vocabulary.Pinyin : "",
-            level = uvp.CurrentLevel,
-            next = uvp.NextReview,
-            stepId = uvp.Vocabulary != null ? (int)uvp.Vocabulary.Level : 1 
-        })
-        .ToListAsync();
+                .Include(uvp => uvp.Vocabulary)
+                    .ThenInclude(v => v.Category) 
+                .Where(uvp => uvp.UserID == userId && uvp.IsSaved == true)
+                .Select(uvp => new
+                {
+                    vocaId = uvp.VocaId,
+                    word = uvp.Vocabulary != null ? uvp.Vocabulary.Hanzi : "",
+                    meaning = uvp.Vocabulary != null ? uvp.Vocabulary.Meaning : "",
+                    pinyin = uvp.Vocabulary != null ? uvp.Vocabulary.Pinyin : "",
+                    level = uvp.CurrentLevel,
+                    next = uvp.NextReview,
+                    stepId = uvp.Vocabulary != null ? (int)uvp.Vocabulary.Level : 1,
+                    roadmapId = uvp.Vocabulary != null ? uvp.Vocabulary.CategoryID : "unknown",
+                    roadmapName = (uvp.Vocabulary != null && uvp.Vocabulary.Category != null) 
+                                ? uvp.Vocabulary.Category.CategoryName 
+                                : "Khác"
+                })
+                .ToListAsync();
 
-    return Ok(list);
+            return Ok(list);
         }
 
         [HttpGet("roadmap-srs-stats/{roadmapId}")]

@@ -18,7 +18,7 @@ import RankingManagement from './RankingManagement';
 import CommunityManagement from './CommunityManagement';
 import ChatManagement from './ChatManagement';
 import QuizManagement from './QuizManagement';
-import AIChatHistory from './AIChatHistory';
+import VideoModeration from './VideoModeration';
 import Analytics from './Analytics';
 import DashboardOverview from './DashboardOverview';
 
@@ -71,7 +71,7 @@ const AdminDashboard = () => {
       case 'community-chats': return <ChatManagement />;
       case 'quiz': return <QuizManagement />;
       case 'analytics': return <Analytics />;
-      case 'ai-chats': return <AIChatHistory />;
+      case 'video': return <VideoModeration />;
       default: return <DashboardOverview setTab={setActiveTab} />;
     }
   };
@@ -82,7 +82,10 @@ const AdminDashboard = () => {
       {/* SIDEBAR */}
       <aside className="w-72 bg-[#0B0F1A] border-r border-slate-800 flex flex-col p-6 overflow-y-auto custom-scrollbar">
         <div className="flex items-center gap-3 mb-10 px-2 cursor-pointer" onClick={() => setActiveTab('overview')}>
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]">HY</div>
+          
+          <div className={`duration-500 bg-gray-50 rounded-2xl flex items-center justify-center shadow-sm overflow-hidden ${open ? "w-8 h-8" : "w-10 h-10 md:w-10"}`}>
+             <img src="/hehe.png" alt="logo" className="w-full h-full object-cover" />
+          </div>
           <span className="text-xl font-bold tracking-tight text-white">Hanyu Admin</span>
         </div>
 
@@ -117,7 +120,7 @@ const AdminDashboard = () => {
           />
 
           <p className="px-4 text-[10px] font-bold text-slate-600 uppercase tracking-[0.2em] mb-2 mt-6">Hệ thống & AI</p>
-          <NavItem active={activeTab === 'ai-chats'} onClick={() => setActiveTab('ai-chats')} icon={<HiOutlineChatAlt />} label="Lịch sử Chat AI" />
+          <NavItem active={activeTab === 'video'} onClick={() => setActiveTab('video')} icon={<HiOutlineChatAlt />} label="Kiểm duyệt nội dung video" />
           <NavItem active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} icon={<HiOutlineClipboardList />} label="Thống kê & Báo cáo" />
           <NavItem active={activeTab === 'system'} onClick={() => setActiveTab('system')} icon={<HiOutlineCog />} label="Cấu hình hệ thống" />
         </nav>

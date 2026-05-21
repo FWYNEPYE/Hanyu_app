@@ -55,7 +55,7 @@ useEffect(() => {
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-gradient-to-r from-blue-600/10 to-transparent p-8 rounded-3xl border border-blue-500/10 text-white">
         <div>
-          <h1 className="text-2xl font-black ">Ní hảo, Admin!</h1>
+          <h1 className="text-2xl font-black ">Xin chào!!!</h1>
         </div>
         <div className="text-right">
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center justify-end gap-2">

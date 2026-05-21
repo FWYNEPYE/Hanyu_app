@@ -155,7 +155,7 @@ export default function SRSPracticeSession({ onFinish }) {
                 <HiOutlineExclamationCircle size={48} />
               </div>
               <h3 className="text-xl font-black text-slate-800 mb-2">Thoát bây giờ?</h3>
-              <p className="text-slate-500 font-medium mb-8">Tiến độ bài học này sẽ không được lưu lại đâu sếp ơi!</p>
+              <p className="text-slate-500 font-medium mb-8">Tiến độ bài học này sẽ không được lưu lại !</p>
               <div className="flex flex-col gap-3">
                 <button 
                   onClick={onFinish} 
@@ -202,9 +202,12 @@ export default function SRSPracticeSession({ onFinish }) {
               <HiOutlineVolumeUp size={24} />
             </button>
           ) : (
+            <div>
             <h1 className="text-2xl font-black text-slate-800 tracking-tighter">{word.word}</h1>
+            <p className="text-base font-bold text-rose-400 mt-4 tracking-widest ">/{word.pinyin}/</p>
+            </div>
           )}
-          <p className="text-base font-bold text-rose-400 mt-4 tracking-widest ">/{word.pinyin}/</p>
+          
         </div>
 
         {(step === 0 || step === 1 || step === 3) && (

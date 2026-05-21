@@ -27,20 +27,20 @@ namespace Server.Controllers
 
         // 2. Lọc từ theo bộ (Dùng cho Game)
         // Lọc từ theo bộ (Dùng cho Game)
-[HttpGet("category/{categoryId}")] // Route này rõ ràng: api/Vocabulary/category/id_cua_sep
-public async Task<ActionResult<IEnumerable<Vocabulary>>> GetByCategory(string categoryId)
-{
-    var result = await _context.Vocabularies
-        .Include(v => v.Category)
-        .Where(v => v.CategoryID == categoryId) 
-        .ToListAsync();
-    
-    if (result == null) return NotFound(); 
-   
+        [HttpGet("category/{categoryId}")] 
+        public async Task<ActionResult<IEnumerable<Vocabulary>>> GetByCategory(string categoryId)
+        {
+            var result = await _context.Vocabularies
+                .Include(v => v.Category)
+                .Where(v => v.CategoryID == categoryId) 
+                .ToListAsync();
+            
+            if (result == null) return NotFound(); 
+        
 
-    return Ok(result);
-}
-     
+            return Ok(result);
+        }
+            
 
         [HttpPost]
         public async Task<ActionResult> PostVocabulary(Vocabulary voca) 

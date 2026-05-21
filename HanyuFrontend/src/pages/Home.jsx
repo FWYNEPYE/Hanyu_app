@@ -198,7 +198,7 @@ const Home = () => {
                             shadow-[0_15px_35px_rgba(0,0,0,0.15)] 
                             flex items-center justify-center overflow-hidden border border-gray-100 
                             group-hover:-translate-y-1 transition-all duration-300">
-                <img src="/logoo.png" alt="Logo" className="w-full h-full object-cover" />
+                <img src="/hehe.png" alt="Logo" className="w-full h-full object-cover" />
               </div>
             </div>
 

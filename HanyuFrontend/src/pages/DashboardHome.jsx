@@ -280,9 +280,34 @@ const stats = useMemo(() => {
     ? Math.round((learnedCount / totalVocab) * 100) 
     : 0;
   
+    const getDailyChallenge = () => {
+    if (seconds < 600) {
+      return {
+        text: "Hoàn thành 10p học",
+        sub: "Nhận ngay +15 điểm thưởng 🔥",
+       
+        link: "/dashboard/roadmap/hsk" // Hoặc link roadmap đang học
+      };
+    }
+    if (dueCount > 0) {
+      return {
+        text: "Dọn dẹp từ vựng đến hạn",
+        sub: "Giữ vững trí nhớ tốt 🧠",
+       
+        link: "/dashboard/game/srs"
+      };
+    }
+    return {
+      text: "Chinh phục Bảng xếp hạng",
+      sub: "Đứng TOP nhận quà khủng 🏆",
+      
+      link: "/dashboard/leaderboard"
+    };
+  };
+  const currentChallenge = getDailyChallenge();
   
   return [
-    { id: 'task', label: "Nhiệm vụ hôm nay", value: dailyTasks?.find(t => !t.isCompleted)?.taskName || "Đã xong hết!", sub: dailyTasks?.filter(t => !t.isCompleted).length > 0 ? "Làm ngay thôi 🔥" : "Nghỉ ngơi nhé ✅", icon: HiOutlineClipboardList, color: "text-blue-500", bg: "bg-blue-50", link: "/dashboard/vocabulary", isLink: true },
+    { id: 'task', label: "Thử thách hôm nay", value: currentChallenge.text,  sub: currentChallenge.sub,  icon: HiOutlineClipboardList, color: "text-blue-500", bg: "bg-blue-50", link: currentChallenge.link,  isLink: true  },
     { id: 'review', label: "Từ đến hạn ôn tập", value: `${dueCount} từ`, sub: dueCount > 0 ? "Nhắc lại ngay 🔥" : "Đã hoàn thành ✅", icon: HiOutlineBell, color: "text-red-500", bg: "bg-red-50", link: "/dashboard/game/srs", isLink: true, isWarning: dueCount > 0 },
     { id: 'progress', label: "Tiến độ hiện tại", value: `${progressPercent}%`, sub: `Đã thuộc: ${learnedCount}/${totalVocab} từ`, icon: HiOutlineTrendingUp, color: "text-green-500", bg: "bg-green-50", isLink: false },
     { 
@@ -304,17 +329,25 @@ const stats = useMemo(() => {
 const calculateProgress = (categoryName) => {
   if (!vocabData || !Array.isArray(vocabData) || vocabData.length === 0) return 0;
   
-  const categoryWords = vocabData.filter(v => {
-    const val = String(v.category || v.Category || v.type || v.level || "").toLowerCase();
-    return val.includes(categoryName.toLowerCase());
+  const learnedInSrs = vocabData.filter(v => {
+    const val = String(v.category || v.Category || v.type || "").toLowerCase().trim();
+    return val.includes(categoryName.toLowerCase().trim());
   });
-  
-  if (categoryWords.length === 0) return 0;
 
-  // Tính số từ đã thuộc (Lv >= 8)
-  const completed = categoryWords.filter(v => Number(v.stepId || v.StepId) >= 0).length;
-  
-  return Math.round((completed / categoryWords.length) * 100);
+  const learnedCount = learnedInSrs.filter(v => {
+    const level = Number(v.currentLevel || v.stepId || v.StepId || 0);
+    return level >= 1; 
+  }).length;
+
+  const totalInSystem = backendData?.totalVocabulary || 100; 
+
+
+  let divider = totalInSystem;
+  if (categoryName.toUpperCase() === 'HSK') divider = 150; // Ví dụ HSK 1 có 150 từ
+  if (categoryName.toUpperCase() === 'TOCFL') divider = 500;
+
+  const result = Math.round((learnedCount / divider) * 100);
+  return result > 100 ? 100 : result;
 };
 
   const hskProgress = calculateProgress('HSK');
@@ -324,7 +357,7 @@ const calculateProgress = (categoryName) => {
 
     
     return [
-    { title: "HSK", desc: "Chứng chỉ năng lực Hán Ngữ (9 cấp)", icon: HiOutlineFlag, color: "text-red-500", bg: "bg-red-50", progress: hskProgress, status: hskProgress > 0 ? (hskProgress === 100 ? "Hoàn thành" : "Đang học") : "Chưa bắt đầu" },
+    { title: "HSK", desc: "Chứng chỉ năng lực Hán Ngữ ", icon: HiOutlineFlag, color: "text-red-500", bg: "bg-red-50", progress: hskProgress, status: hskProgress.progress === 100 ? "Hoàn thành" : (hskProgress.hasStarted ? "Đang học" : "Chưa bắt đầu")},
     { title: "TOCFL", desc: "Kỳ thi năng lực Hoa Ngữ", icon: HiOutlineBadgeCheck, color: "text-blue-500", bg: "bg-blue-50", progress: tocflProgress, status: tocflProgress > 0 ? "Đang học" : "Chưa bắt đầu" },
     { title: "Giao tiếp thực tế", desc: "Tiếng Trung đời sống & Phản xạ", icon: HiOutlineTranslate, color: "text-orange-500", bg: "bg-orange-50", progress: communicationProgress, status: communicationProgress > 0 ? "Đang học" : "Chưa bắt đầu" },
     { title: "Học tập Học thuật", desc: "Bộ thủ, cấu trúc câu & viết", icon: HiOutlineAcademicCap, color: "text-purple-500", bg: "bg-purple-50", progress: academicProgress, status: academicProgress > 0 ? "Đang học" : "Chưa bắt đầu" },
@@ -337,13 +370,24 @@ const calculateProgress = (categoryName) => {
       
       <div className="flex flex-col lg:flex-row gap-5">
         <div className="flex-[1.8] bg-gradient-to-br from-red-600 to-pink-600 rounded-[35px] p-6 md:p-8 text-white relative overflow-hidden shadow-xl shadow-red-100/50 flex flex-col justify-center">
-          <div className="relative z-10">
-            <h1 className="text-2xl md:text-3xl font-black mb-2 uppercase tracking-tighter ">CHÀO MỪNG, {backendData?.userStats.username || "NGƯỜI HỌC"}! 👋</h1>
-            <p className="text-red-50 font-bold text-xs md:text-sm max-w-sm opacity-90 leading-relaxed">Mục tiêu hôm nay là 30 từ mới. Cố gắng lên nhé!</p>
-            <Link to="/dashboard/vocabulary">
-              <button className="mt-4 bg-white text-red-600 px-6 py-2 rounded-xl font-black hover:shadow-lg transition-all active:scale-95 text-[9px] uppercase tracking-widest">Tiếp tục bài học</button>
-            </Link>
-          </div>
+         <div className="relative z-10">
+  <h1 className="text-2xl md:text-3xl font-black mb-2 tracking-tighter">
+    Xin chào, {backendData?.userStats?.username || "NGƯỜI HỌC"}! 👋
+  </h1>
+
+  {/* Hiển thị số bộ từ mới dựa trên NewBundlesCount */}
+  <p className="text-red-50 font-bold text-xs md:text-sm max-w-sm opacity-90 leading-relaxed">
+    🔥 Cộng đồng vừa cập nhật thêm <span className="text-white underline">{backendData?.newBundlesCount || 0} bộ từ mới</span> tuần này.
+  </p>
+
+  {/* Nút bấm dẫn đến đúng lộ trình đang học dở */}
+  <Link to={`/dashboard/roadmap/${backendData?.suggestedLink || 'hsk'}`}>
+    <button className="mt-4 bg-white text-red-600 px-6 py-2 rounded-xl font-black hover:shadow-lg transition-all active:scale-95 text-[12px]  tracking-widest flex items-center gap-2">
+      Học tiếp: {backendData?.suggestedRoadmap || "HSK 1"} 
+      <HiOutlineArrowRight />
+    </button>
+  </Link>
+</div>
           <div className="absolute top-[-20%] right-[-5%] w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
         </div>
 
@@ -353,9 +397,12 @@ const calculateProgress = (categoryName) => {
             <span className="font-black uppercase tracking-widest text-[10px]">Chuỗi ngày học</span>
           </div>
           <div className="flex items-baseline gap-1.5 mb-4">
-            <span className="text-4xl font-black "> {isGoalReached ? (backendData?.userStats.currentStreak || 0) : 0}</span>
-            <span className="text-sm font-bold opacity-90 uppercase text-white">Ngày</span>
-          </div>
+  {/* Lấy currentStreak từ backend data trả về */}
+  <span className="text-4xl font-black "> 
+    {isGoalReached ? (backendData?.userStats?.currentStreak || 0) : (backendData?.userStats?.currentStreak || 0)}
+  </span>
+  <span className="text-sm font-bold opacity-90 uppercase text-white">Ngày</span>
+</div>
           {!isGoalReached && (
             <div className="absolute top-4 right-4 animate-pulse flex items-center gap-1 bg-red-500 px-2 py-1 rounded-full">
                 <HiOutlineExclamationCircle size={12}/>
@@ -378,27 +425,32 @@ const calculateProgress = (categoryName) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {stats.map((item) => {
           const Content = (
-            <div className="flex items-center gap-5 min-w-0">
-              <div className={`w-14 h-14 ${item.bg} ${item.color} rounded-[22px] flex items-center justify-center shrink-0 shadow-sm transition-all ${item.isWarning && 'animate-pulse'}`}>
-                <item.icon className="w-7 h-7" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest break-words leading-tight">{item.label}</p>
-                <h4 className={`text-sm font-black leading-tight mt-0.5 break-words  tracking-tighter ${item.id === 'performance' ? 'font-mono' : ''} ${item.isWarning ? 'text-red-600' : 'text-gray-800'}`}>
-                    {item.value}
-                </h4>
-                {item.id === 'progress' ? (
-                  <div className="w-full bg-gray-100 h-2 rounded-full mt-2 overflow-hidden border border-gray-50">
-                    <div className="bg-green-500 h-full rounded-full" style={{ width: item.value }}></div>
-                  </div>
-                ) : ( 
-                    <p className={`text-[10px] font-bold truncate uppercase tracking-tighter mt-1 ${item.isWarning ? 'text-red-500' : 'text-gray-400'}`}>
-                        {item.sub}
-                    </p> 
-                )}
-              </div>
-            </div>
-          );
+  <div className="flex items-center gap-6 min-w-0 py-1"> 
+    <div className={`w-16 h-16 ${item.bg} ${item.color} rounded-[24px] flex items-center justify-center shrink-0 shadow-sm transition-all ${item.isWarning && 'animate-pulse'}`}>
+      <item.icon className="w-8 h-8" /> 
+    </div>
+    
+    <div className="min-w-0 flex-1 flex flex-col gap-y-1.5"> {/* Dùng flex-col và gap-y để giãn các dòng chữ */}
+      <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] leading-none">
+        {item.label}
+      </p>
+      
+      <h4 className={`text-base font-black tracking-tight leading-tight ${item.id === 'performance' ? 'font-mono' : ''} ${item.isWarning ? 'text-red-600' : 'text-gray-800'}`}>
+        {item.value}
+      </h4>
+      
+      {item.id === 'progress' ? (
+        <div className="w-full bg-gray-100 h-2 rounded-full mt-1 overflow-hidden border border-gray-50">
+          <div className="bg-green-500 h-full rounded-full transition-all duration-500" style={{ width: item.value }}></div>
+        </div>
+      ) : ( 
+        <p className={`text-[10px] font-bold uppercase tracking-tight leading-none ${item.isWarning ? 'text-red-500' : 'text-gray-400 opacity-80'}`}>
+          {item.sub}
+        </p> 
+      )}
+    </div>
+  </div>
+);
           return item.isLink ? (
             <Link key={item.id} to={item.link} className="group bg-white p-6 rounded-[35px] border border-gray-100 shadow-sm hover:shadow-xl transition-all flex flex-col justify-center">{Content}</Link>
           ) : ( <div key={item.id} className={`bg-white p-6 rounded-[35px] border shadow-sm flex flex-col justify-center min-h-[110px] transition-colors ${item.isWarning ? 'border-red-100' : 'border-gray-100'}`}>{Content}</div> );
@@ -444,10 +496,10 @@ const calculateProgress = (categoryName) => {
         <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-2 items-center gap-x-6 gap-y-1.5">
           <div className="space-y-1">
             <h4 className="text-sm md:text-base font-black text-gray-800 uppercase tracking-tight leading-tight truncate">{roadmap.title}</h4>
-            <p className="text-[10px] text-gray-400 font-medium leading-relaxed truncate">{roadmap.desc}</p>
+            <p className="text-[14px] text-gray-400 font-medium leading-relaxed truncate">{roadmap.desc}</p>
           </div>
           <div className="flex flex-col gap-1.5">
-            <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-gray-400 leading-none">
+            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-400 leading-none">
               <span>Hoàn thành</span>
               <span className="text-gray-800 ">{roadmap.progress}%</span>
             </div>

@@ -511,7 +511,7 @@ const unreadCount = notifications.filter(n => !n.isRead).length;
             {/* Click Profile */}
             <div className="flex items-center gap-4 md:border-l md:pl-8 border-gray-100 cursor-pointer group" onClick={() => setIsProfileOpen(true)}>
               <div className="text-right hidden lg:block">
-                <p className="text-sm font-black uppercase text-gray-800 leading-none group-hover:text-red-500 transition-colors">{user.name}</p>
+                <p className="text-sm font-black  text-gray-800 leading-none group-hover:text-red-500 transition-colors">{user.name}</p>
               </div>
               <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-red-500 to-pink-500 p-0.5 shadow-lg overflow-hidden group-hover:scale-105 transition-transform">
                 <img src={user.avatar} alt="avatar" className="w-full h-full object-cover rounded-[14px]" />

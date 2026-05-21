@@ -362,11 +362,11 @@ const handleOpenSaveModal = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-10">
           <div className="lg:col-span-4 space-y-5">
             <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-xl flex flex-col items-center justify-center min-h-[350px] overflow-hidden">
-                <h1 className="text-2xl font-black text-[#2d3436] mb-3 tracking-tight text-center break-words w-full">
+                <h1 className="text-3xl font-black text-[#2d3436] mb-3 tracking-tight text-center break-words w-full">
                   {result?.hanzi || searchTerm}
                 </h1>
 
-                <div className="text-sm font-bold text-gray-400 mb-10 text-center px-4">
+                <div className="text-xl font-bold text-gray-400 mb-10 text-center px-4">
                   {isSearching ? (
                     <span className="animate-pulse text-blue-400 font-medium">AI đang phân tích...</span>
                   ) : (
@@ -448,7 +448,7 @@ const handleOpenSaveModal = () => {
               )}
         
 
-              <h3 className="text-2xl font-black mb-3 text-[#2d3436]">{result.meaning}</h3>
+              <h3 className="text-xl font-black mb-3 text-[#2d3436]">{result.meaning}</h3>
               {/* <p className="text-gray-500 leading-relaxed text-base font-medium mb-6">"{result.definition || 'Đang cập nhật định nghĩa chi tiết...'}"</p> */}
               <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100/50">
                 <h4 className="font-black text-blue-700 text-[11px] uppercase mb-2 tracking-wider">Điểm ngữ pháp:</h4>
@@ -464,8 +464,8 @@ const handleOpenSaveModal = () => {
               <div className="space-y-4">
                 {result.example ? (
                   <div className="p-4 bg-gray-50/50 rounded-2xl border border-transparent hover:border-gray-100 transition-all">
-                    <p className="text-lg font-bold text-[#2d3436]">{result.example}</p>
-                    <p className="text-gray-400 text-sm font-medium mt-1">{result.exampleMeaning}</p>
+                    <p className="text-xl font-bold text-[#2d3436]">{result.example}</p>
+                    <p className="text-gray-400 text-base font-medium mt-1">{result.exampleMeaning}</p>
                   </div>
                 ) : (
                   <p className="text-gray-400 text-sm">Chưa có ví dụ.</p>

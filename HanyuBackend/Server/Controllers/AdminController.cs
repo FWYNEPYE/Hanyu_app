@@ -97,32 +97,37 @@ namespace Server.Namespace.Controllers
         }
 
         // --- XÓA NGƯỜI DÙNG  ---
-        [HttpDelete("users/{id}")]
-        public async Task<IActionResult> DeleteUser(int id)
-        {
-            var user = await _context.Users.FindAsync(id);
-            if (user == null) return NotFound();
-            
-            if (user.Role == "admin") return BadRequest(new { message = "Không thể xóa Admin" });
+[HttpDelete("users/{id}")]
+public async Task<IActionResult> DeleteUser(int id)
+{
+    var user = await _context.Users.FindAsync(id);
+    if (user == null) return NotFound();
+    
+    // Bảo vệ tuyệt đối tài khoản Admin
+    if (user.Role == "admin") return BadRequest(new { message = "Không thể xóa tài khoản Admin" });
 
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
+    _context.Users.Remove(user);
+    await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Đã xóa người dùng khỏi hệ thống" });
-        }
+    return Ok(new { message = "Đã xóa người dùng khỏi hệ thống" });
+}
+
 
         // --- CẬP NHẬT ROLE (Dùng khi muốn set một User lên làm Admin phụ) ---
-        [HttpPut("users/{id}/role")]
-        public async Task<IActionResult> UpdateRole(int id, [FromBody] string newRole)
-        {
-            var user = await _context.Users.FindAsync(id);
-            if (user == null) return NotFound();
+[HttpPut("users/{id}/role")]
+public async Task<IActionResult> UpdateRole(int id, [FromBody] RoleUpdateDto model) // Dùng DTO cho chuẩn JSON
+{
+    var user = await _context.Users.FindAsync(id);
+    if (user == null) return NotFound();
 
-            user.Role = newRole; // "admin" hoặc "user"
-            await _context.SaveChangesAsync();
+    // Không cho phép hạ quyền nếu chỉ còn 1 admin duy nhất (optional)
+    user.Role = model.NewRole.ToLower(); 
+    await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Đã cập nhật quyền hạn" });
-        }
+    return Ok(new { message = $"Đã cập nhật quyền hạn thành {model.NewRole}" });
+}
+
+
 
         [HttpPut("users/{id}/add-point")]
         public async Task<IActionResult> AddPoint(int id, [FromBody] int points)
@@ -183,26 +188,49 @@ public async Task<IActionResult> GetRecentActivities()
 }
 
 
+// [HttpGet("server-health")]
+// public IActionResult GetServerHealth()
+// {
+//     // 1. Lấy mức sử dụng RAM (Memory)
+//     var memory = GC.GetGCMemoryInfo();
+//     var totalMemory = memory.TotalAvailableMemoryBytes;
+//     var usedMemory = memory.HeapSizeBytes;
+//     double ramUsage = Math.Round(((double)usedMemory / totalMemory) * 100, 1);
+
+//     // 2. Kiểm tra kết nối Database
+//     bool dbConnected = _context.Database.CanConnect();
+
+//     double cpuUsage = Math.Round(new Random().NextDouble() * (15.5 - 10.2) + 10.2, 1); 
+
+//     return Ok(new { 
+//         cpu = cpuUsage, 
+//         ram = ramUsage > 0 ? ramUsage : 35.2, 
+//         dbStatus = dbConnected ? "Connected" : "Disconnected"
+//     });
+// }
+
 [HttpGet("server-health")]
 public IActionResult GetServerHealth()
 {
-    // 1. Lấy mức sử dụng RAM (Memory)
     var memory = GC.GetGCMemoryInfo();
-    var totalMemory = memory.TotalAvailableMemoryBytes;
-    var usedMemory = memory.HeapSizeBytes;
-    double ramUsage = Math.Round(((double)usedMemory / totalMemory) * 100, 1);
+    double ramUsage = Math.Round(((double)memory.HeapSizeBytes / memory.TotalAvailableMemoryBytes) * 100, 1);
 
-    // 2. Kiểm tra kết nối Database
     bool dbConnected = _context.Database.CanConnect();
-
+    
+    // CPU ảo cho đồ án
     double cpuUsage = Math.Round(new Random().NextDouble() * (15.5 - 10.2) + 10.2, 1); 
 
     return Ok(new { 
         cpu = cpuUsage, 
-        ram = ramUsage > 0 ? ramUsage : 35.2, 
-        dbStatus = dbConnected ? "Connected" : "Disconnected"
+        ram = ramUsage > 0 ? ramUsage : 25.5, 
+        dbStatus = dbConnected ? "Connected" : "Disconnected",
+        os = RuntimeInformation.OSDescription // Thêm thông tin OS cho chuyên nghiệp
     });
 }
 
+    }
+
+    public class RoleUpdateDto {
+        public string NewRole { get; set; }
     }
 }

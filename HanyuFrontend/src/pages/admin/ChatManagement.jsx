@@ -77,7 +77,7 @@ const ChatManagement = () => {
       setAdminInput("");
       fetchMonitor();
     } catch (err) {
-      alert("Lỗi gửi tin sếp ơi!");
+      alert("Lỗi gửi tin !");
     }
   };
 

@@ -66,29 +66,26 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("admin-login")]
-    public async Task<IActionResult> AdminLogin([FromBody] AdminLoginDto model)
+public async Task<IActionResult> AdminLogin([FromBody] AdminLoginDto model)
+{
+    // Chấp nhận pass cứng để demo cho nhanh
+    if (model.Username == "admin" && model.Password == "abc1234")
     {
-        if (model.Username == "admin" && model.Password == "abc1234")
-        {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == "admin");
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == "admin");
 
-            if (user == null) return NotFound("Chưa tạo user admin trong SQL!");
-        
-            if (user.Role != "admin") {
-                user.Role = "admin";
-                await _context.SaveChangesAsync();
-            }
-
-            var token = CreateToken(user); 
-
-            return Ok(new { 
-                token = token, 
-                userId = user.UserID,
-                username = user.Username 
-            });
+        if (user == null) return NotFound("Chưa tạo user admin trong SQL!");
+    
+        // Cập nhật lại chuẩn role admin nếu bị nhảy sang cái khác
+        if (user.Role != "admin") {
+            user.Role = "admin";
+            await _context.SaveChangesAsync();
         }
-        return Unauthorized("Mày không phải Sếp, cúc!");
+
+        var token = CreateToken(user); 
+        return Ok(new { token, userId = user.UserID, username = user.Username });
     }
+    return Unauthorized("Mày không phải Sếp, cúc!");
+}
 
 
     // Hợp nhất hàm tạo Token, dùng chung cho cả Google và Admin

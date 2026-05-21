@@ -148,7 +148,7 @@ const StepDetail = () => {
                                 </button>
                                 <div className="min-w-0">
                                     <div className="text-base md:text-lg font-black text-gray-800 leading-tight">{v.hanzi}</div>
-                                    <div className="hidden md:block text-[11px] font-medium text-gray-400 ">/{v.pinyin}/</div>
+                                    <div className="hidden md:block text-[13px] font-medium text-gray-400 ">/{v.pinyin}/</div>
                                 </div>
                             </div>
 
@@ -163,8 +163,8 @@ const StepDetail = () => {
                             </div>
 
                             <div className="hidden md:block md:col-span-5 px-4 text-left">
-                                <div className="text-sm text-gray-600 font-medium line-clamp-1 ">"{v.example}"</div>
-                                <div className="text-[11px] text-gray-400 mt-0.5">{v.exampleMeaning}</div>
+                                <div className="text-base text-gray-600 font-medium line-clamp-1 ">"{v.example}"</div>
+                                <div className="text-[13px] text-gray-400 mt-0.5">{v.exampleMeaning}</div>
                             </div>
 
                             <div className="col-span-2 md:col-span-1 flex justify-end">

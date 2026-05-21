@@ -92,7 +92,7 @@ public async Task<IActionResult> GetVocabByStep(int stepId)
         .Where(v => v.CategoryID == step.CategoryID)
         .ToListAsync();
 
-    // Lấy danh sách ID những từ user ĐÃ THUỘC (có trong bảng SRS)
+    // Lấy danh sách ID những từ user ĐÃ THUỘC 
     var savedVocaIds = await _context.UserVocaProgresses
         .Where(uvp => uvp.UserID == userId && uvp.IsSaved)
         .Select(uvp => uvp.VocaId)

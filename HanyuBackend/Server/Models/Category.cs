@@ -30,6 +30,8 @@ namespace Server.Models
 
         public int LikesCount { get; set; } = 0;    
         public string? Tags { get; set; } 
+        public int LastWordCount { get; set; } = 0;
+        public bool IsBonusAwarded { get; set; } = false;
         public int? UserID { get; set; } 
 
         [ForeignKey("UserID")]

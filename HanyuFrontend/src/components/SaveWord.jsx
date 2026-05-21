@@ -1,3 +1,4 @@
+//nút lưu từ vào bộ ở trang search
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { HiX, HiOutlinePlus, HiOutlineFolder } from "react-icons/hi";

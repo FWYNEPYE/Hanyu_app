@@ -58,7 +58,7 @@ const CommunityManagement = () => {
       
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white  tracking-tighter ">Quản lý Cộng đồng Hanyu</h2>
+          <h2 className="text-2xl font-bold text-white  tracking-tighter ">Kiểm duyệt Cộng đồng</h2>
         </div>
         
         <div className="flex items-center gap-3">

@@ -72,7 +72,10 @@ namespace Server.Controllers
                     .GroupBy(c => c.SessionID)
                     .Select(g => new {
                         SessionId = g.Key,
-                        Title = g.OrderBy(m => m.CreatedAt).First().Content,
+                        Title = g.Where(m => m.Role == "user")
+                                .OrderBy(m => m.CreatedAt)
+                                .Select(m => m.Content)
+                                .FirstOrDefault() ?? "Cuộc hội thoại mới",
                         LastMessageAt = g.Max(m => m.CreatedAt)
                     })
                     .OrderByDescending(s => s.LastMessageAt)
@@ -82,7 +85,7 @@ namespace Server.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Lỗi lấy danh sách hội thoại: {ex.Message}");
+                return StatusCode(500, $"Lỗi: {ex.Message}");
             }
         }
 
@@ -91,10 +94,14 @@ namespace Server.Controllers
         {
             try
             {
+                // Lấy TOÀN BỘ tin nhắn của session này
                 var history = await _context.ChatHistories
                     .Where(c => c.SessionID == sessionId)
-                    .OrderBy(c => c.CreatedAt)
+                    .OrderBy(c => c.CreatedAt) // Sắp xếp từ cũ đến mới
                     .ToListAsync();
+
+                if (history == null || !history.Any())
+                    return NotFound("Không tìm thấy tin nhắn cho hội thoại này.");
 
                 return Ok(history);
             }
@@ -110,13 +117,13 @@ namespace Server.Controllers
             var response = new AIResponse();
             if (request.CurrentPage.Contains("vocabulary")) {
                 response.Text = "发现你在背单词！要不要考一下？✍️";
-                response.Translation = "Thấy mày đang học từ vựng! Kiểm tra thử không?";
+                response.Translation = "Thấy bạn đang học từ vựng! Kiểm tra thử không?";
             } else if (request.CurrentPage.Contains("video")) {
                 response.Text = "这段视频很有趣吧？🎥";
                 response.Translation = "Video này thú vị chứ?";
             } else {
-                response.Text = "你好! 我 là Lili, sẵn sàng học chưa? 🐾";
-                response.Translation = "Chào mày! Tao là Lili, sẵn sàng học chưa?";
+                response.Text = "你好啊! 我是Lili, 准备好学了吗？🐾";
+                response.Translation = "Chào bạn! Mìn là Lili, sẵn sàng học chưa?";
             }
             return Ok(response);
         }

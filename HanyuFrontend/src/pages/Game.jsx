@@ -1,12 +1,11 @@
-
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios'; 
 import { 
   HiOutlineAcademicCap, HiOutlineDatabase, HiOutlineChevronDown, 
   HiOutlineLightningBolt, HiOutlineRefresh, HiOutlineClipboardList, 
   HiOutlinePuzzle, HiOutlinePencilAlt, HiOutlineVolumeUp, 
-  HiOutlineTrendingUp, HiOutlineCheck, HiOutlineCollection, HiOutlineCloudDownload
+  HiOutlineTrendingUp, HiOutlineCheck, HiOutlineCollection, HiOutlineCloudDownload,
+  HiOutlineMap // Thêm icon lộ trình cho trực quan sếp nhé
 } from "react-icons/hi";
 import { useNavigate } from 'react-router-dom';
 
@@ -26,23 +25,15 @@ const Game = () => {
   const [selectedGame, setSelectedGame] = useState(null);
   const [openDropdown, setOpenDropdown] = useState(null);
   const [gameData, setGameData] = useState([]); 
-
   const [fullCategoryData, setFullCategoryData] = useState([]);
-
-
   const [isLoading, setIsLoading] = useState(false); 
   const [collections, setCollections] = useState([]); // Chứa bộ từ từ DB
-  
-
-  const [activeTab, setActiveTab] = useState('personal');
-
 
   const [filters, setFilters] = useState({
-    source: 'personal', // 'personal' hoặc 'purchased'
+    source: 'personal', // 'personal', 'purchased' hoặc 'roadmap'
     category: '', 
     limit: '20'
   });
-
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -51,7 +42,7 @@ const Game = () => {
         const res = await axios.get(`${API_BASE_URL}/Category/user/${userId}`); 
         setCollections(res.data);
         
-        // Mặc định chọn bộ đầu tiên của cá nhân
+        // Mặc định chọn bộ đầu tiên của cá nhân khi vừa vào trang
         const firstPersonal = res.data.find(c => c.categoryType === 'user' && !c.parentCategoryID);
         if (firstPersonal) {
           setFilters(prev => ({ ...prev, category: firstPersonal.categoryID.toString() }));
@@ -63,19 +54,24 @@ const Game = () => {
     fetchCategories();
   }, []);
 
-// Tìm đoạn này trong Game.jsx của sếp và sửa lại:
-const filteredCollections = collections.filter(c => {
-    if (filters.source === 'personal') {
-      // Nếu chọn "Bộ từ cá nhân" -> Lấy những cái IsBorrowed = false
-      return c.isBorrowed === false; 
-    } else {
-      // Nếu chọn "Bộ từ cộng đồng" -> Lấy những cái IsBorrowed = true
-      return c.isBorrowed === true;
-    }
-});
+  // 🎯 TẬP TRUNG XỬ LÝ LỌC BỘ TỪ THEO 3 NGUỒN KHÁC NHAU Ở ĐÂY:
+ const filteredCollections = collections.filter(c => {
+  // Phòng thủ đọc thuộc tính viết Hoa hay viết Thường từ DB/API nhả ra
+  const type = (c.categoryType || c.CategoryType || '').toLowerCase();
+  const borrowed = c.isBorrowed === true || c.IsBorrowed === true;
 
-  //  Logic xử lý bắt đầu Game
- const handleStartGame = async (gameId) => {
+  if (filters.source === 'personal') {
+    return (type === 'user') && !borrowed;
+  } else if (filters.source === 'purchased') {
+    return borrowed;
+  } else if (filters.source === 'roadmap') {
+    // Nhận diện cả chữ "system" đã được ép format hoặc chữ "hsk" gốc
+    return type === 'system' || type === 'hsk';
+  }
+  return true;
+});
+  // Logic xử lý bắt đầu Game
+  const handleStartGame = async (gameId) => {
     if (!filters.category) {
         alert("Sếp chọn bộ từ đã nhé!");
         return;
@@ -89,7 +85,6 @@ const filteredCollections = collections.filter(c => {
             return;
         }
 
-        // 2. SỬA Ở ĐÂY: Lưu lại toàn bộ từ vựng để làm đáp án nhiễu cho GameMCQ
         setFullCategoryData(res.data); 
 
         const limitNum = parseInt(filters.limit);
@@ -107,9 +102,10 @@ const filteredCollections = collections.filter(c => {
     }
   };
 
-
+  // 📝 BỔ SUNG OPTION LỘ TRÌNH ĐANG HỌC VÀO DANH SÁCH KHAI BÁO
   const sourceOptions = [
     { id: 'personal', label: 'Bộ từ cá nhân', icon: HiOutlineCollection },
+    { id: 'roadmap', label: 'Lộ trình đang học', icon: HiOutlineMap },
     { id: 'purchased', label: 'Bộ từ cộng đồng', icon: HiOutlineCloudDownload },
   ];
 
@@ -129,8 +125,13 @@ const filteredCollections = collections.filter(c => {
     { id: 'mix', title: "Game tổng hợp", desc: "Thách thức cực hạn", icon: HiOutlineLightningBolt, color: "from-pink-500 to-rose-600", isHot: true, bgColor: "bg-[#FFF1F2]" },
   ];
 
+  const getSourceIcon = () => {
+    const currentSource = sourceOptions.find(s => s.id === filters.source);
+    return currentSource ? currentSource.icon : HiOutlineCollection;
+  };
+
   const getSelectedLabel = (type) => {
-    if (type === 'source') return sourceOptions.find(s => s.id === filters.source).label;
+    if (type === 'source') return sourceOptions.find(s => s.id === filters.source)?.label || 'Bộ từ cá nhân';
     if (type === 'category') {
       const found = collections.find(c => c.categoryID.toString() === filters.category);
       return found ? found.categoryName : "--- Chọn bộ từ ---";
@@ -141,8 +142,6 @@ const filteredCollections = collections.filter(c => {
   const CustomDropdown = ({ label, type, options, icon: DefaultIcon }) => {
     const isOpen = openDropdown === type;
     const currentLabel = getSelectedLabel(type);
-
-
 
     return (
       <div className="relative flex-1">
@@ -166,8 +165,27 @@ const filteredCollections = collections.filter(c => {
                 key={opt.id}
                 onClick={() => {
                   if (type === 'source') {
-                    setFilters({ ...filters, source: opt.id, category: '' }); // Reset category khi đổi nguồn
-                  } else {
+  const tempFiltered = collections.filter(c => {
+    const cType = (c.categoryType || c.CategoryType || '').toLowerCase();
+    const borrowed = c.isBorrowed === true || c.IsBorrowed === true;
+
+    if (opt.id === 'personal') return cType === 'user' && !borrowed;
+    if (opt.id === 'purchased') return borrowed;
+    if (opt.id === 'roadmap') return cType === 'system' || cType === 'hsk';
+    return true;
+  });
+  
+  // Tránh lỗi undefined khi đọc categoryID hoặc CategoryID
+  const nextCategory = tempFiltered.length > 0 
+    ? (tempFiltered[0].categoryID || tempFiltered[0].CategoryID || '').toString() 
+    : '';
+
+  setFilters({ 
+    source: opt.id, 
+    category: nextCategory, 
+    limit: filters.limit 
+  });
+}else {
                     setFilters({ ...filters, [type]: opt.id.toString() });
                   }
                   setOpenDropdown(null);
@@ -185,15 +203,14 @@ const filteredCollections = collections.filter(c => {
     );
   };
 
-
   // Logic render màn hình Game hoặc Menu
-if (selectedGame) {
-  const commonProps = { 
-    data: gameData, 
-    allVocabs: fullCategoryData,
-    onBack: () => { setSelectedGame(null); window.is_playing = false; } 
-  };
-    
+  if (selectedGame) {
+    const commonProps = { 
+      data: gameData, 
+      allVocabs: fullCategoryData,
+      onBack: () => { setSelectedGame(null); window.is_playing = false; } 
+    };
+      
     const GameComponents = {
         mcq: GameMCQ,
         flashcard: GameFlashcard,
@@ -206,10 +223,10 @@ if (selectedGame) {
 
     const SpecificGame = GameComponents[selectedGame];
     return (
-    <div className="flex-1 min-w-0 min-h-screen bg-white relative">
-      <SpecificGame {...commonProps} filters={selectedGame === 'srs' ? filters : undefined} />
-    </div>
-  );
+      <div className="flex-1 min-w-0 min-h-screen bg-white relative">
+        <SpecificGame {...commonProps} filters={selectedGame === 'srs' ? filters : undefined} />
+      </div>
+    );
   }
 
   return (
@@ -220,15 +237,15 @@ if (selectedGame) {
       <div className="bg-white/80 backdrop-blur-xl p-4 sm:p-6 rounded-[40px] border border-white shadow-xl max-w-6xl mx-auto mt-8 relative z-[60]">
         <div className="flex flex-col md:flex-row gap-4">
           
-          {/* DROPDOWN NGUỒN */}
+          {/* DROPDOWN NGUỒN TỪ VỰNG */}
           <CustomDropdown 
             label="Nguồn từ vựng" 
             type="source" 
-            icon={filters.source === 'personal' ? HiOutlineCollection : HiOutlineCloudDownload}
+            icon={getSourceIcon()}
             options={sourceOptions} 
           />
 
-          {/* DROPDOWN BỘ TỪ  */}
+          {/* DROPDOWN CHỌN BỘ TỪ CHI TIẾT */}
           <CustomDropdown 
             label="Chọn bộ từ vựng" 
             type="category" 
@@ -236,7 +253,7 @@ if (selectedGame) {
             options={filteredCollections.map(c => ({ id: c.categoryID, label: c.categoryName }))} 
           />
 
-          {/*  DROPDOWN SỐ LƯỢNG */}
+          {/* DROPDOWN SỐ LƯỢNG */}
           <CustomDropdown 
             label="Số câu hỏi" 
             type="limit" 
@@ -247,8 +264,7 @@ if (selectedGame) {
         </div>
       </div>
 
-
-
+      {/* GRID CHỌN CHẾ ĐỘ CHƠI GAME */}
       <div className="relative z-10 grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-10">
         {gameModes.map((mode) => (
           <div key={mode.id} onClick={() => handleStartGame(mode.id)} className="group relative cursor-pointer">
@@ -272,18 +288,18 @@ if (selectedGame) {
         <div className="relative z-20 flex flex-col lg:flex-row items-center justify-between gap-6 sm:gap-10">
           <div className="text-center lg:text-left space-y-3">
             <div className="inline-block bg-red-600 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Smart Memory</div>
-            <h2 className="text-2xl sm:text-4xl font-black italic tracking-tighter leading-tight">Ôn tập Ngắt quãng (SRS)</h2>
-            <p className="text-xs sm:text-gray-400 max-w-xl font-medium">Luyện tập những từ khó dựa trên dữ liệu cá nhân của mày.</p>
+            <h2 className="text-2xl sm:text-4xl font-black tracking-tighter leading-tight">Ôn tập Ngắt quãng (SRS)</h2>
+            <p className="text-xs sm:text-gray-400 max-w-xl font-medium">Luyện tập những từ khó dựa trên dữ liệu cá nhân</p>
           </div>
           <button 
-      onClick={() => {
-        navigate('srs'); 
-        window.is_playing = true;
-      }}
-      className="w-full lg:w-auto bg-white text-gray-900 px-10 py-4 sm:px-14 sm:py-5 rounded-[20px] sm:rounded-[30px] font-black text-sm sm:text-lg hover:bg-red-600 hover:text-white transition-all shadow-xl flex items-center justify-center gap-4"
-    >
-  ÔN TẬP <HiOutlineRefresh className="text-xl" />
-</button>
+            onClick={() => {
+              navigate('srs'); 
+              window.is_playing = true;
+            }}
+            className="w-full lg:w-auto bg-white text-gray-900 px-10 py-4 sm:px-14 sm:py-5 rounded-[20px] sm:rounded-[30px] font-black text-sm sm:text-lg hover:bg-red-600 hover:text-white transition-all shadow-xl flex items-center justify-center gap-4"
+          >
+            ÔN TẬP <HiOutlineRefresh className="text-xl" />
+          </button>
         </div>
       </div>
     </div>

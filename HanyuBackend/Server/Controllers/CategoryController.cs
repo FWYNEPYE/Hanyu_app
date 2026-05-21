@@ -25,14 +25,11 @@ namespace Server.Controllers
         [HttpPost]
         public async Task<ActionResult<Category>> PostCategory(Category category)
         {
-            //  Nếu Frontend không gửi ID, tự tạo ID từ Name
             if (string.IsNullOrEmpty(category.CategoryID))
             {
-                // Tạo slug đơn giản hoặc dùng Guid cho chắc chắn 100% không trùng
                 category.CategoryID = Guid.NewGuid().ToString().Substring(0, 8); 
             }
 
-            // Kiểm tra lại
             var exists = await _context.Categories.AnyAsync(c => c.CategoryID == category.CategoryID);
             if (exists)
             {
@@ -45,34 +42,25 @@ namespace Server.Controllers
             return Ok(category);
         }
 
-
-
-        // Xóa bộ từ
         [HttpDelete("{id}/{userId}")]
         public async Task<IActionResult> DeleteCategory(string id, int userId)
         {
             var category = await _context.Categories.FindAsync(id);
             if (category == null) return NotFound(new { message = "Không tìm thấy bộ từ này!" });
 
-            // người tạo
             if (category.UserID == userId)
             {
-                // Xóa tất cả từ vựng liên quan
                 var relatedVocab = _context.Vocabularies.Where(v => v.CategoryID == id);
                 _context.Vocabularies.RemoveRange(relatedVocab);
-
 
                 var sharedLinks = _context.UserCategories.Where(uc => uc.CategoryID == id);
                 _context.UserCategories.RemoveRange(sharedLinks);
 
-                // Xóa bộ gốc
                 _context.Categories.Remove(category);
                 
                 await _context.SaveChangesAsync();
                 return Ok(new { message = "Bạn là chủ: Đã xóa toàn bộ dữ liệu gốc!" });
             }
-            
-            // lưu từ cđ
             else
             {
                 var userLink = await _context.UserCategories
@@ -88,243 +76,222 @@ namespace Server.Controllers
                 return BadRequest(new { message = "Bạn không có quyền xóa bộ từ này!" });
             }
         }
-                
- [HttpGet("user/{userId}")]
+
+[HttpGet("user/{userId}")]
 public async Task<IActionResult> GetUserCategories(int userId)
 {
-    // 1. Lấy các bộ từ do chính User này tạo ra
+    // 1. Bộ từ cá nhân tự tạo (Type = user)
     var myCategories = await _context.Categories
-        .Where(c => c.UserID == userId)
+        .Where(c => c.UserID == userId && c.CategoryType == "user")
         .Select(c => new {
-            c.CategoryID,
-            c.CategoryName,
-            c.CategoryType,
-            c.UserID,
-            c.ParentCategoryID,
-            c.Version,
-            c.Description,
-            c.IconName,
-            c.ColorClass,
-            c.Tags,
-            c.IsPublic,
-            IsBorrowed = false, // Đánh dấu: Đồ chính chủ
-            Words = _context.Vocabularies.Count(v => v.CategoryID == c.CategoryID)
+            categoryID = c.CategoryID,
+            categoryName = c.CategoryName,
+            categoryType = c.CategoryType,
+            userID = c.UserID,
+            parentCategoryID = c.ParentCategoryID,
+            version = c.Version,
+            description = c.Description,
+            iconName = c.IconName,
+            colorClass = c.ColorClass,
+            tags = c.Tags,
+            isPublic = c.IsPublic,
+            isBorrowed = false, 
+            words = _context.Vocabularies.Count(v => v.CategoryID == c.CategoryID)
         })
         .ToListAsync();
 
-    // 2. Lấy các bộ từ đi mượn từ cộng đồng (qua bảng UserCategories)
-    // Loại trừ những bộ mà UserID của bộ đó trùng với userId hiện tại để tránh bị lặp
+    // 2. Lấy bộ từ lộ trình hệ thống đang học
+var systemCategories = await _context.Categories
+    .Where(c => c.CategoryType == "system" || c.CategoryType == "HSK")
+    
+    .Where(c => _context.UserProgresses.Any(up => 
+        up.UserID == userId && 
+        up.IsCompleted == true && 
+        up.RoadmapStep.CategoryID == c.CategoryID))
+    .Select(c => new {
+        categoryID = c.CategoryID,
+        categoryName = c.CategoryName,
+        categoryType = "system", 
+        userID = c.UserID,
+        parentCategoryID = c.ParentCategoryID,
+        version = c.Version,
+        description = c.Description,
+        iconName = c.IconName,
+        colorClass = c.ColorClass,
+        tags = c.Tags,
+        isPublic = c.IsPublic,
+        isBorrowed = false,
+        // Đếm chuẩn số từ vựng thuộc bộ từ này dựa theo cột CategoryID 
+        words = _context.Vocabularies.Count(v => v.CategoryID == c.CategoryID)
+    })
+    .ToListAsync();
+
+    // 3. Lấy bộ từ mượn/mua từ cộng đồng từ bảng trung gian
     var borrowedCategories = await _context.UserCategories
-        .Where(uc => uc.UserID == userId && uc.Category.UserID != userId)
+        .Where(uc => uc.UserID == userId && uc.Category.CategoryType != "system" && uc.Category.CategoryType != "HSK")
         .Select(uc => new {
-            uc.Category.CategoryID,
-            uc.Category.CategoryName,
-            uc.Category.CategoryType,
-            uc.Category.UserID,
-            uc.Category.ParentCategoryID,
-            uc.Category.Version,
-            uc.Category.Description,
-            uc.Category.IconName,
-            uc.Category.ColorClass,
-            uc.Category.Tags,
-            uc.Category.IsPublic,
-            IsBorrowed = true, // Đánh dấu: Đồ cộng đồng
-            Words = _context.Vocabularies.Count(v => v.CategoryID == uc.Category.CategoryID)
+            categoryID = uc.Category.CategoryID,
+            categoryName = uc.Category.CategoryName,
+            categoryType = uc.Category.CategoryType,
+            userID = uc.Category.UserID,
+            parentCategoryID = uc.Category.ParentCategoryID,
+            version = uc.Category.Version,
+            description = uc.Category.Description,
+            iconName = uc.Category.IconName,
+            colorClass = uc.Category.ColorClass,
+            tags = uc.Category.Tags,
+            isPublic = uc.Category.IsPublic,
+            isBorrowed = true, 
+            words = _context.Vocabularies.Count(v => v.CategoryID == uc.Category.CategoryID)
         })
         .ToListAsync();
 
-    // 3. Gộp lại và trả về
-    var result = myCategories.Concat(borrowedCategories).ToList();
+    // Gộp tất cả danh sách lại
+    var result = myCategories.Concat(systemCategories).Concat(borrowedCategories).ToList();
     return Ok(result);
 }
 
+        // --- CHỐNG HACK ĐIỂM ---
+[HttpPut("{id}/public-settings")]
+public async Task<IActionResult> UpdatePublicSettings(string id, [FromQuery] int userId, [FromBody] PublicSettingsRequest request)
+{
+    var category = await _context.Categories.FindAsync(id);
+    if (category == null) return NotFound(new { message = "Không tìm thấy bộ từ!" });
 
-        [HttpPut("{id}/public-settings")]
-        public async Task<IActionResult> UpdatePublicSettings(string id, [FromQuery] int userId, [FromBody] PublicSettingsRequest request)
+    if (category.UserID != userId)
+        return StatusCode(403, new { message = "Không phải bộ từ gốc!" });
+
+    int earnedPoints = 0;
+    
+    // LOGIC CỘNG ĐIỂM THÔNG MINH
+    if (request.IsPublic)
+    {
+        // Đếm số từ hiện tại thực tế trong Database
+        var currentWordCount = await _context.Vocabularies.CountAsync(v => v.CategoryID == id);
+        var user = await _context.Users.FindAsync(userId);
+
+        if (user != null)
         {
-            var category = await _context.Categories.FindAsync(id);
-            if (category == null) return NotFound(new { message = "Không tìm thấy bộ từ!" });
-
-            if (category.UserID != userId)
-                return StatusCode(403, new { message = "Không phải bộ từ gốc!" });
-
-            if (!string.IsNullOrEmpty(category.ParentCategoryID) && request.IsPublic)
+            if (!category.IsBonusAwarded) 
             {
-                return BadRequest(new { message = "Không có quyền đăng lại!" });
+                // Lần đầu tiên công khai: Cộng 2 điểm mỗi từ
+                earnedPoints = currentWordCount * 2;
+                category.IsBonusAwarded = true;
+            }
+            else 
+            {
+              
+                int diff = currentWordCount - category.LastWordCount;
+                if (diff > 0)
+                {
+                    earnedPoints = diff * 1; // Thưởng ít hơn cho từ mới ở bản cập nhật
+                }
+                else if (currentWordCount > 0)
+                {
+                    earnedPoints = 1; // Điểm khuyến khích cho việc cập nhật nội dung khác
+                }
             }
 
-            category.IsPublic = request.IsPublic;
-            category.Price = request.Price;
-            category.Description = request.Description;
-            category.IconName = request.Icon;
-            category.ColorClass = request.ThemeColor;
-            category.Tags = request.Tags;
-
-            if (string.IsNullOrEmpty(category.ParentCategoryID)) 
-            {
-                category.Version++; 
-            }
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                return Ok(new { 
-                    message = "Cập nhật thành công!", 
-                    isPublic = category.IsPublic,
-                    version = category.Version 
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = "Lỗi hệ thống: " + ex.Message });
-            }
+            user.Points += earnedPoints;
+            category.LastWordCount = currentWordCount; // Cập nhật mốc từ mới
         }
+    }
+
+    // Cập nhật các thông tin khác
+    category.IsPublic = request.IsPublic;
+    category.Price = request.Price;
+    category.Description = request.Description;
+    category.IconName = request.Icon;
+    category.ColorClass = request.ThemeColor;
+    category.Tags = request.Tags;
+
+    if (string.IsNullOrEmpty(category.ParentCategoryID)) 
+    {
+        category.Version++; 
+    }
+
+    await _context.SaveChangesAsync();
+
+    return Ok(new { 
+        message = earnedPoints > 0 ? $"Thành công! +{earnedPoints} điểm thưởng." : "Cập nhật thành công!", 
+        pointsEarned = earnedPoints,
+        currentPoints = (await _context.Users.FindAsync(userId))?.Points // Trả về tổng điểm mới nhất
+    });
+}
+
 
         [HttpGet("my-collection/{userId}")]
         public async Task<IActionResult> GetMyCollection(int userId)
         {
-            
             var owned = await _context.Categories
                 .Where(c => c.UserID == userId)
                 .Include(c => c.Vocabularies) 
                 .ToListAsync();
-
 
             var borrowed = await _context.UserCategories
                 .Where(uc => uc.UserID == userId)
                 .Include(uc => uc.Category)
                     .ThenInclude(c => c.Vocabularies) 
                 .Select(uc => new {
-                    
                     Category = uc.Category, 
                     HasUpdate = uc.Category.Version > uc.SavedVersion 
                 })
                 .ToListAsync();
 
-            return Ok(new { 
-                ownedByMe = owned, 
-                borrowed = borrowed 
-            });
+            return Ok(new { ownedByMe = owned, borrowed = borrowed });
         }
 
         [HttpPost("save-from-store")]
         public async Task<IActionResult> SaveFromStore([FromBody] SaveCategoryRequest req)
-                {
-                    // Kiểm tra xem đã sở hữu chưa (Chặn không cho lưu trùng)
-                    var isOwned = await _context.UserCategories
-                        .AnyAsync(uc => uc.UserID == req.UserID && uc.CategoryID == req.CategoryID);
-
-                    if (isOwned) return BadRequest(new { message = "Đã sở hữu bộ này rồi, chỉ có thể cập nhật thôi!" });
-
-                    var originalCate = await _context.Categories.FindAsync(req.CategoryID);
-                    if (originalCate == null) return NotFound(new { message = "Bộ từ không tồn tại" });
-
-                    // Lưu vé thông hành vào bảng UserCategory
-                    var userLink = new UserCategory
-                    {
-                        UserID = req.UserID,
-                        CategoryID = req.CategoryID,
-                        SavedVersion = originalCate.Version, // Lưu version gốc 
-                        PurchasedAt = DateTime.Now
-                    };
-
-                    _context.UserCategories.Add(userLink);
-                    await _context.SaveChangesAsync();
-
-                    return Ok(new { message = "Đã lưu bộ từ thành công!" });
-                }
-
-        
-        
-        [HttpPost("sync-update")]
-        public async Task<IActionResult> SyncUpdate([FromBody] SaveCategoryRequest req)
-                {
-                    var userLink = await _context.UserCategories
-                        .Include(uc => uc.Category)
-                        .FirstOrDefaultAsync(uc => uc.UserID == req.UserID && uc.CategoryID == req.CategoryID);
-
-                    if (userLink == null) return NotFound(new { message = "Chưa sở hữu bộ này!" });
-
-                    // Check version
-                    if (userLink.Category.Version > userLink.SavedVersion)
-                    {
-                        var user = await _context.Users.FindAsync(req.UserID);
-                        // Công thức tính point: Ví dụ chênh lệch 1 version = 10 point
-                        int pointPrice = (userLink.Category.Version - userLink.SavedVersion) * 10;
-
-                        if (user.Points < pointPrice) 
-                            return BadRequest(new { message = $"Thiếu {pointPrice} point để cập nhật!" });
-
-                        // Trừ point và đồng bộ version
-                        user.Points -= pointPrice;
-                        userLink.SavedVersion = userLink.Category.Version;
-
-                        await _context.SaveChangesAsync();
-                        return Ok(new { message = "Cập nhật thành công!", newVersion = userLink.SavedVersion });
-                    }
-
-                    return BadRequest(new { message = "Đã là bản mới nhất rồi!" });
-                }
-
-
-
-        [HttpPost("sync/{categoryId}")]
-        public async Task<IActionResult> SyncCollection(string categoryId, [FromQuery] int userId)
         {
-        var user = await _context.Users.FindAsync(userId);
-            
-            var original = await _context.Categories.Include(c => c.Vocabularies)
-                .FirstOrDefaultAsync(c => c.CategoryID == categoryId);
-            
-            var myClone = await _context.Categories.Include(c => c.Vocabularies)
-                .FirstOrDefaultAsync(c => c.ParentCategoryID == categoryId && c.UserID == userId);
+            var isOwned = await _context.UserCategories
+                .AnyAsync(uc => uc.UserID == req.UserID && uc.CategoryID == req.CategoryID);
 
-            if (original == null || myClone == null) return NotFound("Dữ liệu không tồn tại");
+            if (isOwned) return BadRequest(new { message = "Đã sở hữu bộ này rồi!" });
 
-            int totalOriginalWords = original.Vocabularies.Count; 
-            int totalMyWords = myClone.Vocabularies.Count;       
-            int newWordsCount = totalOriginalWords - totalMyWords;
+            var originalCate = await _context.Categories.FindAsync(req.CategoryID);
+            if (originalCate == null) return NotFound(new { message = "Bộ từ không tồn tại" });
 
-            int updateCost = 0;
-            if (newWordsCount > 0) 
+            var userLink = new UserCategory
             {
-                updateCost = (int)Math.Ceiling(newWordsCount * 0.6); 
-            }
+                UserID = req.UserID,
+                CategoryID = req.CategoryID,
+                SavedVersion = originalCate.Version, 
+                PurchasedAt = DateTime.Now
+            };
 
-            if (user.Points < updateCost)
-                return BadRequest(new { message = $"Cần {updateCost} Point để cập nhật thêm {newWordsCount} từ mới!" });
-
-            user.Points -= updateCost;
-            
-            _context.Vocabularies.RemoveRange(myClone.Vocabularies);
-
-                foreach (var v in original.Vocabularies)
-                {
-                    var newVocab = new Vocabulary
-                    {
-                        Hanzi = v.Hanzi,
-                        Pinyin = v.Pinyin,
-                        Meaning = v.Meaning,
-                        Example = v.Example,
-                        ExampleMeaning = v.ExampleMeaning,
-                        Type = v.Type,
-                        Note = v.Note,
-                        CategoryID = myClone.CategoryID 
-                    };
-                    _context.Vocabularies.Add(newVocab);
-                }
-
-            myClone.Version = original.Version;
+            _context.UserCategories.Add(userLink);
             await _context.SaveChangesAsync();
 
-            return Ok(new { 
-                message = updateCost > 0 ? $"Đã thêm {newWordsCount} từ mới. Trừ {updateCost} Point!" : "Đã đồng bộ nội dung mới nhất!",
-                newPoints = user.Points 
-            });
+            return Ok(new { message = "Đã lưu bộ từ thành công!" });
         }
 
+        [HttpPost("sync-update")]
+        public async Task<IActionResult> SyncUpdate([FromBody] SaveCategoryRequest req)
+        {
+            var userLink = await _context.UserCategories
+                .Include(uc => uc.Category)
+                .FirstOrDefaultAsync(uc => uc.UserID == req.UserID && uc.CategoryID == req.CategoryID);
 
+            if (userLink == null) return NotFound(new { message = "Chưa sở hữu bộ này!" });
 
+            if (userLink.Category.Version > userLink.SavedVersion)
+            {
+                var user = await _context.Users.FindAsync(req.UserID);
+                int pointPrice = (userLink.Category.Version - userLink.SavedVersion) * 10;
+
+                if (user.Points < pointPrice) 
+                    return BadRequest(new { message = $"Thiếu {pointPrice} point để cập nhật!" });
+
+                user.Points -= pointPrice;
+                userLink.SavedVersion = userLink.Category.Version;
+
+                await _context.SaveChangesAsync();
+                return Ok(new { message = "Cập nhật thành công!", newVersion = userLink.SavedVersion });
+            }
+
+            return BadRequest(new { message = "Đã là bản mới nhất rồi!" });
+        }
 
         public class PublicSettingsRequest
         {
@@ -341,7 +308,5 @@ public async Task<IActionResult> GetUserCategories(int userId)
             public int UserID { get; set; }
             public string CategoryID { get; set; }
         }
-
-    
     }
 }

@@ -72,57 +72,86 @@ const VideoLearning = () => {
         return id ? `https://i.ytimg.com/vi/${id}/mqdefault.jpg` : ""; 
     };
 
-    const fetchVideos = async () => {
-        try {
-            const res = await axios.get(BASE_URL);
-            setVideos(res.data);
-        } catch (err) { console.error("Lỗi lấy danh sách video:", err); }
-    };
+const fetchVideos = async () => {
+    // Chỉ gọi API nếu đã có currentUserId
+    if (!currentUserId) return;
 
+    try {
+        // Truyền UserID lên Backend (phù hợp với hàm GetVideos ở Backend)
+        const res = await axios.get(`${BASE_URL}?userId=${currentUserId}`);
+        
+        // Xử lý dữ liệu trả về (hỗ trợ cả dạng mảng thường và mảng bọc trong $values của JSON.NET)
+        if (Array.isArray(res.data)) {
+            setVideos(res.data);
+        } else if (res.data?.$values) {
+            setVideos(res.data.$values);
+        }
+    } catch (err) { 
+        console.error("Lỗi lấy danh sách video cá nhân:", err); 
+    }
+};
 
 
     const fetchVideoDetail = async () => {
-        if (!selectedVideo) return;
-        const id = selectedVideo.videoId || selectedVideo.id; 
-        
-        try {
-            setIsLoading(true);
-            const res = await axios.get(`${BASE_URL}/${id}`);
-            const dbSubs = res.data.subtitles || res.data.Subtitles || [];
+    if (!selectedVideo) return;
+    const id = selectedVideo.videoId || selectedVideo.id; 
+    
+    try {
+        if (!selectedVideo.subtitles) setIsLoading(true);
 
-            const formatted = dbSubs.map(s => ({
+        const res = await axios.get(`${BASE_URL}/${id}`);
+        const dbSubs = res.data.subtitles || res.data.Subtitles || res.data.$values || [];
+
+        const formatted = (Array.isArray(dbSubs) ? dbSubs : (dbSubs.$values || [])).map(s => {
+            let rawTokens = s.tokens || s.Tokens || s.tokens?.$values || [];
+            let processedTokens = [];
+
+            if (typeof rawTokens === 'string') {
+                try { processedTokens = JSON.parse(rawTokens); } catch { processedTokens = []; }
+            } else {
+                processedTokens = Array.isArray(rawTokens) ? rawTokens : (rawTokens.$values || []);
+            }
+
+            const finalizedTokens = processedTokens.map(t => ({
+                pinyin: t.pinyin || t.Pinyin || "",
+                char: t.char || t.Char || t.text || t.Text || "" ,
+                mean: t.mean || t.Mean || t.vi || "...",
+                // BỔ SUNG: Lấy loại từ và ghi chú từ dữ liệu AI
+                type: t.type || t.Type || "từ",
+                note: t.note || t.Note || "" 
+            }));
+
+            return {
                 text: s.content || s.Content,
                 startTime: s.startTime || s.StartTime,
                 endTime: s.endTime || s.EndTime,
                 pinyin: s.pinyin || s.Pinyin,
                 vi: s.vi || s.translation || s.Translation || "Chưa có dịch", 
-                tokens: Array.isArray(s.tokens) ? s.tokens : (s.tokens ? JSON.parse(s.tokens) : [])
-            }));
+                tokens: finalizedTokens 
+            };
+        });
 
-            setSubtitles(formatted);
-            setIsAISubsActive(formatted.length > 0);
-        } catch (err) {
-            console.error("Lỗi fetch detail:", err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
+        setSubtitles(formatted);
+        setIsAISubsActive(formatted.length > 0);
+    } catch (err) {
+        console.error("Lỗi fetch detail:", err);
+    } finally {
+        setIsLoading(false);
+    }
+};
     useEffect(() => { fetchVideoDetail(); }, [selectedVideo]);
 
 
-    
-    useEffect(() => { 
-            fetchVideos(); 
-            if (currentUserId) {
-                console.log("Đang lấy bộ từ cho User ID:", currentUserId);
-                fetchVocabGroups(); 
-            } else {
-                console.warn("Không tìm thấy User ID trong localStorage");
-            }
-        }, [currentUserId]);
 
-        useEffect(() => { fetchVideos(); }, []);
+useEffect(() => {
+    if (currentUserId) {
+        console.log("🚀 Khởi tạo dữ liệu cho User:", currentUserId);
+        fetchVideos();
+        fetchVocabGroups();
+    }
+}, [currentUserId]); // Chạy lại mỗi khi currentUserId thay đổi (từ null thành có giá trị)
+
+       
 
  
 
@@ -165,33 +194,33 @@ const VideoLearning = () => {
 
 
     // Lưu từ vựng
-    const saveWordToGroup = async (groupId) => {
-        if (!activeWord || !currentUserId) return;
+ const saveWordToGroup = async (groupId) => {
+    if (!activeWord || !currentUserId) return;
 
-        try {
-            const payload = {
-                hanzi: activeWord.char || activeWord.text,
-                pinyin: activeWord.pinyin,
-                meaning: activeWord.vi || activeWord.mean || "Chưa có nghĩa",
-                type: "Video_Learning", 
-                level: 1, 
-                categoryID: groupId,
-                note: "Lưu từ video"
-            };
+    try {
+        const payload = {
+            hanzi: activeWord.char || activeWord.text,
+            pinyin: activeWord.pinyin,
+            meaning: activeWord.mean || activeWord.vi || "Chưa có nghĩa",
+            // SỬA: Lấy loại từ thực tế từ AI thay vì "Video_Learning"
+            type: activeWord.type || "Từ vựng", 
+            level: 1, 
+            categoryID: groupId,
+            // SỬA: Lưu ghi chú giải thích ngữ cảnh của AI vào phần note
+            note: activeWord.note || "Lưu từ video"
+        };
 
-            const res = await axios.post(`http://localhost:5252/api/Vocabulary`, payload);
-            
-            if (res.status === 200 || res.status === 201) {
-                setActiveWord(null);
-                setIsSelectingGroup(false);
-                
-            }
-        } catch (err) { 
-            console.error("Lỗi từ Server:", err.response?.data);
-            alert("Không thể lưu từ!"); 
+        const res = await axios.post(`http://localhost:5252/api/Vocabulary`, payload);
+        
+        if (res.status === 200 || res.status === 201) {
+            setActiveWord(null);
+            setIsSelectingGroup(false);
         }
-    };
-   
+    } catch (err) { 
+        console.error("Lỗi từ Server:", err.response?.data);
+        alert("Không thể lưu từ!"); 
+    }
+};
 
     
 
@@ -210,20 +239,22 @@ const VideoLearning = () => {
     }, [currentTime]);
 
     const handleAIAnalyze = async () => {
-        if (isLoading) return;
-        const id = selectedVideo?.videoId || selectedVideo?.id;
-        setIsLoading(true);
-        try {
-           await axios.post(`${BASE_URL}/${id}/auto-generate-sub`, {}, {
-    timeout: 300000 
-    });
-            await fetchVideoDetail(); 
-        } catch (err) {
-            alert("Lỗi khi phân tích AI!");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    if (isLoading) return;
+    const id = selectedVideo?.videoId || selectedVideo?.id;
+    setIsLoading(true);
+    try {
+        await axios.post(`${BASE_URL}/${id}/auto-generate-sub`, {}, {
+            // Tăng timeout lên 10 phút (600,000ms) vì AI xử lý rất lâu
+            timeout: 600000 
+        });
+        await fetchVideoDetail(); 
+    } catch (err) {
+        console.error("Chi tiết lỗi AI:", err.response?.data);
+        alert("Lỗi khi phân tích AI! Kiểm tra Log Backend để biết chi tiết.");
+    } finally {
+        setIsLoading(false);
+    }
+};
 
     const speakChinese = (text) => {
         const utterance = new SpeechSynthesisUtterance(text);
@@ -258,38 +289,40 @@ const VideoLearning = () => {
  
 
     const handleUpload = async () => {
-        // Kiểm tra đầu vào tùy theo tab
-        if (!newTitle) return alert("Vui lòng nhập tiêu đề!");
-        if (addTab === 'youtube' && !newUrl) return alert("Vui lòng dán link YouTube!");
-        if (addTab === 'local' && !selectedFile) return alert("Vui lòng chọn file video!");
+    if (!newTitle) return alert("Vui lòng nhập tiêu đề!");
+    if (addTab === 'youtube' && !newUrl) return alert("Vui lòng dán link YouTube!");
+    if (addTab === 'local' && !selectedFile) return alert("Vui lòng chọn file video!");
+    if (!currentUserId) return alert("Lỗi: Không xác định được người dùng!");
 
-        try {
-            const formData = new FormData();
-            formData.append("Title", newTitle);
-            formData.append("VideoType", addTab); 
+    try {
+        const formData = new FormData();
+        formData.append("Title", newTitle);
+        formData.append("VideoType", addTab);
+        // QUAN TRỌNG: Gửi UserID để lưu vào DB
+        formData.append("UserID", currentUserId); 
 
-            if (addTab === 'youtube') {
-                formData.append("UrlOrPath", newUrl);
-            } else {
-                formData.append("File", selectedFile);
-            }
-
-            await axios.post(`${BASE_URL}/upload`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-
-            // Reset form và đóng modal
-            setIsAddModalOpen(false);
-            setNewTitle(""); 
-            setNewUrl("");
-            setSelectedFile(null);
-            fetchVideos();
-            alert("Thêm video thành công! 🎉");
-        } catch (err) { 
-            console.error(err);
-            alert("Lỗi khi thêm video!"); 
+        if (addTab === 'youtube') {
+            formData.append("UrlOrPath", newUrl);
+        } else {
+            formData.append("File", selectedFile);
         }
-    };
+
+        await axios.post(`${BASE_URL}/upload`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+
+        // Reset và load lại
+        setIsAddModalOpen(false);
+        setNewTitle(""); 
+        setNewUrl("");
+        setSelectedFile(null);
+        fetchVideos(); // Load lại danh sách sau khi thêm
+        
+    } catch (err) { 
+        console.error(err);
+        alert("Lỗi khi thêm video!"); 
+    }
+};
 
     return (
         <div className="min-h-screen bg-[#F1F5F9] p-4 md:p-8">
@@ -361,13 +394,14 @@ const VideoLearning = () => {
                                                     className={`p-6 rounded-[2rem] transition-all duration-300 border-2 cursor-pointer ${isActive ? 'bg-blue-50 border-blue-400 shadow-xl' : 'border-transparent opacity-40 hover:opacity-100'}`}>
                                                     <div className="flex flex-wrap gap-x-2 gap-y-3">
                                                         {sub.tokens?.map((t, ti) => (
-                                                            <div key={ti} className="flex flex-col items-center hover:bg-blue-100 rounded-lg p-1 transition-all" onClick={(e) => handleWordClick(e, t)}>
-                                                                {showPinyin && <p className="text-[10px] text-blue-500 font-black">{t.pinyin || t.Pinyin}</p>}
-                                                                <p className="text-2xl font-medium text-slate-800">{t.char || t.Char || t.text}</p>
-                                                            </div>
-                                                        ))}
+    <div key={ti} className="flex flex-col items-center hover:bg-blue-100 rounded-lg p-1 transition-all" onClick={(e) => handleWordClick(e, t)}>
+        {/* Chỉ cần dùng t.pinyin và t.char vì đã chuẩn hóa ở bước fetch */}
+        {showPinyin && <p className="text-[13px] text-blue-500 font-black">{t.pinyin}</p>}
+        <p className="text-2xl font-medium text-slate-800">{t.char}</p>
+    </div>
+))}
                                                     </div>
-                                                    {showMean && <p className="mt-4 text-slate-400 italic text-sm font-medium border-t pt-3">{sub.vi}</p>}
+                                                    {showMean && <p className="mt-4 text-slate-400  text-base font-medium border-t pt-3">{sub.vi}</p>}
                                                 </div>
                                             );
                                         })}
@@ -390,7 +424,7 @@ const VideoLearning = () => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={() => setIsAddModalOpen(false)} 
-                        className="absolute inset-0 bg-rose-900/20 backdrop-blur-md" 
+                        className="absolute inset-0  backdrop-blur-md" 
                     />
                     
                     <motion.div 
@@ -500,36 +534,64 @@ const VideoLearning = () => {
                 )}
 
                 {activeWord && !isSelectingGroup && (
-                    <>
-                        <div className="fixed inset-0 z-[400]" onClick={() => setActiveWord(null)}></div>
-                        <motion.div 
-                            initial={{ opacity: 0, scale: 0.9 }} 
-                            animate={{ opacity: 1, scale: 1, transform: 'translate(-50%, calc(-100% - 15px))'}} 
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="fixed z-[410] bg-[#fde8e9]  rounded-[1.5rem] p-4 shadow-2xl w-[220px] text-center"
-                            style={{ left: `${popoverPos.x}px`, top: `${popoverPos.y}px`, transform: 'translate(-50%, calc(-100% - 15px))' }}
-                        >
-                            <div className="relative flex justify-center items-center mb-1 text-[#460809]">
-                                <span className="text-2xl font-black">{activeWord.char || activeWord.text}</span>
-                                <button onClick={() => speakChinese(activeWord.char || activeWord.text)} className="absolute right-0 hover:scale-110 transition-transform">
-                                    <IoVolumeHighOutline size={18} />
-                                </button>
-                            </div>
-                            <p className="text-[10px] font-black text-[#aa232c]  tracking-widest mb-2">/ {activeWord.pinyin} /</p>
-                            
-                            <div className=" p-2 rounded-md mb-3">
-                                <p className="text-[11px] text-[#923335] font-medium italic">"{activeWord.vi || activeWord.mean}"</p>
-                            </div>
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); setIsSelectingGroup(true); }}
-                                className="w-full bg-[#e7000b] text-white py-2 rounded-xl text-[10px] font-black uppercase shadow-sm hover:bg-[#c10007]"
-                            >
-                                + Lưu từ vựng
-                            </button>
-                            <div className="absolute left-1/2 -translate-x-1/2 bottom-[-8px] w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-[#fde8e9]"></div>
-                        </motion.div>
-                    </>
-                )}
+    <>
+        <div className="fixed inset-0 z-[400]" onClick={() => setActiveWord(null)}></div>
+        <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }} 
+            animate={{ opacity: 1, scale: 1, transform: 'translate(-50%, calc(-100% - 15px))'}} 
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed z-[410] bg-[#fde8e9] rounded-[2rem] p-5 shadow-2xl w-[260px] text-center border border-rose-100"
+            style={{ left: `${popoverPos.x}px`, top: `${popoverPos.y}px`, transform: 'translate(-50%, calc(-100% - 15px))' }}
+        >
+            {/* Hán tự và Loa phát âm */}
+            <div className="relative flex justify-center items-center mb-1 text-[#460809]">
+                <span className="text-3xl font-black">{activeWord.char || activeWord.text}</span>
+                <button onClick={() => speakChinese(activeWord.char || activeWord.text)} className="absolute right-0 p-1 hover:bg-rose-100 rounded-full transition-colors">
+                    <IoVolumeHighOutline size={20} />
+                </button>
+            </div>
+
+            {/* Pinyin */}
+            <p className="text-[12px] font-black text-[#aa232c] tracking-widest mb-3  ">
+                / {activeWord.pinyin} /
+            </p>
+
+            {/* Loại từ (Badge bo tròn) */}
+            <div className="mb-3">
+                <span className="bg-[#f8b4b7] text-[#7c1a1e] px-3 py-0.5 rounded-full text-[10px] font-black uppercase">
+                    {activeWord.type || "từ"}
+                </span>
+            </div>
+            
+            {/* Nghĩa tiếng Việt */}
+            <div className="mb-2">
+                <p className="text-[15px] text-[#923335] font-bold leading-tight">
+                    {activeWord.vi || activeWord.mean}
+                </p>
+            </div>
+
+            {/* Ghi chú giải thích từ AI (Màu xám, nhỏ) */}
+            {activeWord.note && (
+                <div className="mb-4 px-2">
+                    <p className="text-[12px] text-slate-500  leading-relaxed border-t border-rose-200/50 pt-2">
+                        {activeWord.note}
+                    </p>
+                </div>
+            )}
+
+            {/* Nút lưu từ */}
+            <button 
+                onClick={(e) => { e.stopPropagation(); setIsSelectingGroup(true); }}
+                className="w-full bg-[#e7000b] text-white py-3 rounded-2xl text-[11px] font-black uppercase shadow-md hover:bg-[#c10007] active:scale-95 transition-all"
+            >
+                + Lưu vào bộ từ
+            </button>
+
+            {/* Mũi tên trỏ xuống của Popover */}
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-[-8px] w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[10px] border-[#fde8e9]"></div>
+        </motion.div>
+    </>
+)}
 
                 {/* modal bộ từ */}
                 {isSelectingGroup && (

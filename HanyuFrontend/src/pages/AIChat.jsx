@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   HiPaperAirplane, HiX, HiChatAlt2, HiChevronDown, 
-  HiPencilAlt, HiMicrophone, HiPlus, HiClock, HiChevronRight
+  HiMicrophone, HiPlus, HiClock, HiChevronRight
 } from "react-icons/hi";
 
 const AIChat = ({ currentPage }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState('chat'); 
   const [showMenu, setShowMenu] = useState(false);
-  const [mode, setMode] = useState('chat'); // 'chat' hoặc 'correct'
+  
   const [showPinyin, setShowPinyin] = useState(true);
   const [showTranslation, setShowTranslation] = useState(true);
   const [inputText, setInputText] = useState('');
@@ -16,31 +16,94 @@ const AIChat = ({ currentPage }) => {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef(null);
 
-  // ---  LỊCH SỬ ---
-const loadChatHistory = async () => {
+  // 🎯 Quản lý trạng thái Mic chuẩn chỉ
+  const [isListening, setIsListening] = useState(false); 
+  const recognitionRef = useRef(null);
+  const isStartedRef = useRef(false);
+
+  const [sessions, setSessions] = useState([]);
+  const [currentSessionId, setCurrentSessionId] = useState(null);
+
+  const loadSessions = async () => {
     const currentUserId = localStorage.getItem("userId") || 7;
     try {
-        const response = await fetch(`http://localhost:5252/api/AI/history/${currentUserId}`); 
+        const response = await fetch(`http://localhost:5252/api/AI/sessions/${currentUserId}`); 
         if (response.ok) {
             const data = await response.json();
-            if(data.length > 0) {
-               setMessages(data.map(m => ({
-                 id: m.id, 
-                 role: m.role.toLowerCase(), 
-                 text: m.content, 
-                 pinyin: m.pinyin, 
-                 translation: m.translation
-               })));
-            }
+            setSessions(data); 
         }
-    } catch (e) { console.log("Lỗi khi load lịch sử"); }
-};
+    } catch (e) { console.log("Lỗi khi load danh sách session"); }
+  };
 
-useEffect(() => {
-    loadChatHistory();
-}, []);
+  useEffect(() => {
+      loadSessions();
+  }, [isOpen]);
 
+  // 🎙️ Khởi tạo cấu hình Mic một lần duy nhất khi App chạy
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const rec = new SpeechRecognition();
+      rec.continuous = false;   
+      rec.interimResults = false; 
+      
+      rec.lang = 'zh-CN'; 
 
+      rec.onstart = () => {
+        console.log("🔴 [Mic Log]: Trình duyệt bắt đầu MỞ MIC lắng nghe...");
+        setIsListening(true);
+        isStartedRef.current = true;
+      };
+
+      rec.onresult = (event) => {
+        console.log("🎯 [Mic Log]: Đã nhận diện được âm thanh, đang xử lý...");
+        const transcript = event.results[0][0].transcript;
+        if (transcript) {
+          console.log("✅ [Mic Log] Chữ nhận được là:", transcript);
+          setInputText(transcript); // Đổ chữ thẳng vào ô input
+        }
+      };
+
+      rec.onerror = (event) => {
+        console.error("❌ [Mic Log] Bị lỗi hệ thống:", event.error);
+        if (event.error === 'not-allowed') {
+          alert("Sếp ơi! Trình duyệt đang chặn quyền truy cập Mic rồi, bấm cho phép ở góc URL nhé!");
+        }
+        setIsListening(false);
+        isStartedRef.current = false;
+      };
+
+      rec.onend = () => {
+        console.log("⚪ [Mic Log]: Mic đã TỰ ĐỘNG ĐÓNG (User dừng nói hoặc timeout).");
+        setIsListening(false);
+        isStartedRef.current = false;
+      };
+
+      recognitionRef.current = rec;
+    } else {
+      console.error("❌ Trình duyệt này hoàn toàn không hỗ trợ Web Speech API.");
+    }
+  }, []);
+
+  const selectSession = async (sessionId) => {
+    setCurrentSessionId(sessionId);
+    try {
+        setIsLoading(true);
+        const response = await fetch(`http://localhost:5252/api/AI/history/session/${sessionId}`);
+        if (response.ok) {
+            const data = await response.json();
+            setMessages(data.map(m => ({
+                id: m.id, 
+                role: m.role.toLowerCase(), 
+                text: m.content, 
+                pinyin: m.pinyin, 
+                translation: m.translation
+            })));
+            setView('chat'); 
+        }
+    } catch (e) { console.error("Lỗi load tin nhắn:", e); }
+    finally { setIsLoading(false); }
+  };
 
   // --- GỢI Ý THEO TRANG ---
   useEffect(() => {
@@ -71,12 +134,11 @@ useEffect(() => {
   const handleSendMessage = async () => {
     if (!inputText.trim() || isLoading) return;
 
-    // LẤY ID ĐỘNG TỪ LOCALSTORAGE
-    const currentUserId = localStorage.getItem("userId") || 7; // Mặc định là 7 nếu chưa có
-
-    const userMsg = { id: Date.now(), role: 'user', text: inputText };
-    setMessages(prev => [...prev, userMsg]);
+    const currentUserId = localStorage.getItem("userId") || 7; 
     const messageToSend = inputText;
+
+    const userMsg = { id: Date.now(), role: 'user', text: messageToSend };
+    setMessages(prev => [...prev, userMsg]);
     setInputText('');
     setIsLoading(true);
 
@@ -84,11 +146,12 @@ useEffect(() => {
         const response = await fetch('http://localhost:5252/api/AI/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: parseInt(currentUserId), message: messageToSend })
+            body: JSON.stringify({ userId: parseInt(currentUserId), message: messageToSend, SessionID: currentSessionId })
         });
 
         if (response.ok) {
             const data = await response.json();
+            if (!currentSessionId && data.sessionId) setCurrentSessionId(data.sessionId);
             setMessages(prev => [...prev, { 
                 id: data.id, 
                 role: 'ai', 
@@ -103,42 +166,37 @@ useEffect(() => {
         setIsLoading(false);
     }
   };
+ 
   const startListening = () => {
-    // Kiểm tra trình duyệt
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-        alert("Trình duyệt của mày không hỗ trợ giọng nói rồi!");
-        return;
+    if (!recognitionRef.current) {
+      alert("Trình duyệt không hỗ trợ giọng nói!");
+      return;
     }
 
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'vi-VN'; // Hoặc 'zh-CN' nếu mày muốn nói tiếng Trung trực tiếp
-    recognition.continuous = false;
+    // Nếu đang bật nói, bấm phát nữa sẽ chủ động ÉP DỪNG và lấy chữ luôn
+    if (isStartedRef.current) {
+      console.log("⏹️ [Mic Action]: Chủ động bấm dừng Mic để lấy chữ...");
+      recognitionRef.current.stop();
+      return;
+    }
 
-    recognition.onstart = () => {
-        setIsLoading(true); // Mượn cái loading để báo hiệu đang nghe
-    };
-
-    recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setInputText(transcript); // Đổ chữ vừa nói vào ô Input
-    };
-
-    recognition.onerror = (event) => {
-        console.error("Lỗi thu âm:", event.error);
-    };
-
-    recognition.onend = () => {
-        setIsLoading(false);
-    };
-
-    recognition.start();
-};
+    try {
+      recognitionRef.current.start();
+    } catch (ex) {
+      console.log("Mic đang bận xử lý...", ex);
+    }
+  };
 
   const startNewChat = () => {
-    setMessages([{ id: Date.now(), role: 'ai', text: 'Chào mày! Tao là Lili, muốn học gì nào? ✨', pinyin: 'Nǐ hǎo!', translation: 'Chào bạn!' }]);
+    setMessages([{ 
+        id: Date.now(), 
+        role: 'ai', 
+        text: '你好! 我是Lili, 今天 we 们学什么呀? ✨', 
+        pinyin: 'Nǐ hǎo! Wǒ shì Lili, jīntiān wǒmen xué shénme ya?', 
+        translation: 'Chào! Mình là Lili, hôm nay chúng mình học gì nhỉ' 
+    }]);
+    setCurrentSessionId(null); 
     setView('chat');
-    setMode('chat');
     setShowMenu(false);
   };
 
@@ -157,22 +215,18 @@ useEffect(() => {
                 <div className="cursor-pointer" onClick={() => setShowMenu(!showMenu)}>
                   <div className="flex items-center gap-1">
                     <h2 className="font-black text-white text-[15px]">
-                      {view === 'list' ? 'Lịch sử' : (mode === 'chat' ? 'Hehe' : 'Sửa lỗi câu')}
+                      {view === 'list' ? 'Lịch sử hội thoại' : 'Trò chuyện với Lili'}
                     </h2>
                     <HiChevronDown className={`text-white transition-transform ${showMenu ? 'rotate-180' : ''}`} />
                   </div>
                 </div>
 
-                {/* --- MENU CON --- */}
                 {showMenu && (
                   <>
                     <div className="fixed inset-0" onClick={() => setShowMenu(false)}></div>
                     <div className="absolute top-12 left-0 w-48 bg-white rounded-2xl shadow-2xl border border-[#ffeadb] py-2 z-[60] animate-in zoom-in-95">
                       <button onClick={startNewChat} className="w-full flex items-center gap-2 px-4 py-2 text-[12px] text-[#ff416c] hover:bg-[#fff5f5] font-bold transition-colors"><HiPlus /> Chat mới</button>
-                      <button onClick={() => {setView('list'); setShowMenu(false)}} className="w-full flex items-center gap-2 px-4 py-2 text-[12px] text-[#4a3230] hover:bg-[#fff5f5] font-bold transition-colors"><HiClock /> Lịch sử</button>
-                      <div className="h-[1px] bg-[#fff5f0] my-2 mx-4"></div>
-                      <button onClick={() => {setMode('chat'); setView('chat'); setShowMenu(false)}} className="w-full flex items-center gap-2 px-4 py-2 text-[12px] text-[#4a3230] hover:bg-[#fff5f5] font-bold transition-colors"><HiChatAlt2 /> Hội thoại tự do</button>
-                      <button onClick={() => {setMode('correct'); setView('chat'); setShowMenu(false)}} className="w-full flex items-center gap-2 px-4 py-2 text-[12px] text-[#4a3230] hover:bg-[#fff5f5] font-bold transition-colors"><HiPencilAlt /> Sửa lỗi câu</button>
+                      <button onClick={() => {loadSessions(); setView('list'); setShowMenu(false)}} className="w-full flex items-center gap-2 px-4 py-2 text-[12px] text-[#4a3230] hover:bg-[#fff5f5] font-bold transition-colors"><HiClock /> Lịch sử</button>
                     </div>
                   </>
                 )}
@@ -197,42 +251,74 @@ useEffect(() => {
                   <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[85%] px-4 py-2.5 rounded-[24px] shadow-sm ${msg.role === 'user' ? 'bg-gradient-to-br from-[#ff416c] to-[#ff4b2b] text-white rounded-br-none' : 'bg-white text-[#4a3230] border border-[#ffeadb] rounded-bl-none'}`}>
                       {msg.role === 'ai' && showPinyin && <p className="text-[10px] text-[#ff4b2b] font-bold mb-1 opacity-80">{msg.pinyin}</p>}
-                      {/* Chỗ hiện CHỮ HÁN (Dòng chữ to ở giữa) */}
                       <p className="text-[14px] font-medium leading-relaxed tracking-wide text-[#2d3436]">
                           {msg.text || msg.content} 
                       </p>
-                      {msg.role === 'ai' && showTranslation && <div className="mt-2 pt-2 border-t border-[#fff5f0] text-[11px] text-[#8e7b79] italic">{msg.translation}</div>}
+                      {msg.role === 'ai' && showTranslation && <div className="mt-2 pt-2 border-t border-[#fff5f0] text-[11px] text-[#8e7b79]">{msg.translation}</div>}
                     </div>
                   </div>
                 ))}
-                {isLoading && <div className="ml-2 text-[10px] text-gray-400 animate-bounce">Lili đang check bài...</div>}
+                {isLoading && <div className="ml-2 text-[10px] text-gray-400 animate-bounce">Đợi xíu...</div>}
                 <div ref={scrollRef} />
               </div>
 
               <div className="p-4 bg-white border-t-2 border-[#fff5f0]">
                 <div className="flex items-center gap-3 bg-[#fdf2f0] rounded-full px-4 py-1.5 border-2 border-transparent focus-within:border-[#ff9068]">
-                  <input type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} placeholder={mode === 'chat' ? "Nhập tin nhắn..." : "Dán câu cần sửa vào đây..."} className="flex-1 bg-transparent border-none focus:ring-0 text-[13.5px] outline-none" />
-                  <button 
-    onClick={inputText.trim() ? handleSendMessage : startListening} 
-    className={`transition-all ${!inputText.trim() ? 'hover:scale-125 text-blue-500' : 'text-[#ff416c]'}`}
->
-    {inputText.trim() ? <HiPaperAirplane size={22} className="rotate-90" /> : <HiMicrophone size={22} />}
-</button>
+                  <input 
+                    type="text" 
+                    value={inputText} 
+                    onChange={(e) => setInputText(e.target.value)} 
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} 
+                    placeholder="Nhập tin nhắn..." 
+                    className="flex-1 bg-transparent border-none focus:ring-0 text-[13.5px] outline-none" 
+                  />
+                  
+                  {inputText.trim() ? (
+                    <button type="button" onClick={handleSendMessage} className="text-[#ff416c] hover:scale-110 transition-all">
+                      <HiPaperAirplane size={22} className="rotate-90" />
+                    </button>
+                  ) : (
+                    <button 
+                      type="button" 
+                      onClick={startListening} 
+                      className={`transition-all duration-300 ${isListening ? 'text-red-500 scale-125 animate-pulse' : 'text-blue-500 hover:scale-110'}`}
+                    >
+                      <HiMicrophone size={22} />
+                    </button>
+                  )}
                 </div>
               </div>
             </>
           ) : (
-            /* VIEW LỊCH SỬ NHƯ CŨ */
-            <div className="flex-1 overflow-y-auto bg-[#fffaf5] p-5 space-y-3">
-              <p className="text-center text-[10px] font-bold text-gray-400">TẤT CẢ CUỘC TRÒ CHUYỆN</p>
-              {/* Duyệt qua list lịch sử thật ở đây */}
-              <div onClick={() => setView('chat')} className="p-4 bg-white rounded-3xl border border-[#ffeadb] flex items-center justify-between cursor-pointer hover:border-[#ff416c]">
-                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-[#fff5f5] text-[#ff416c] flex items-center justify-center"><HiChatAlt2 size={20}/></div>
-                    <h4 className="text-[13px] font-black text-[#4a3230]">Bài học gần nhất</h4>
-                 </div>
-                 <HiChevronRight className="text-[#ffeadb]" />
-              </div>
+            <div className="flex-1 overflow-y-auto bg-[#fffaf5] p-5 space-y-3 no-scrollbar">
+              <p className="text-center text-[10px] font-bold text-gray-400 mb-4 uppercase tracking-widest">
+                Lịch sử trò chuyện
+              </p>
+              
+              {sessions.length > 0 ? sessions.map((s) => (
+                <div 
+                  key={s.sessionId} 
+                  onClick={() => selectSession(s.sessionId)}
+                  className="p-4 bg-white rounded-3xl border border-[#ffeadb] flex items-center justify-between cursor-pointer hover:border-[#ff416c] hover:shadow-md transition-all group"
+                >
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="w-10 h-10 shrink-0 rounded-2xl bg-[#fff5f5] text-[#ff416c] flex items-center justify-center group-hover:bg-[#ff416c] group-hover:text-white transition-colors">
+                      <HiChatAlt2 size={20}/>
+                    </div>
+                    <div className="overflow-hidden">
+                      <h4 className="text-[13px] font-black text-[#4a3230] truncate">{s.title}</h4>
+                      <p className="text-[10px] text-gray-400">
+                        {new Date(s.lastMessageAt).toLocaleString('vi-VN')}
+                      </p>
+                    </div>
+                  </div>
+                  <HiChevronRight className="text-[#ffeadb] group-hover:text-[#ff416c]" />
+                </div>
+              )) : (
+                <div className="text-center py-10 text-gray-400 text-sm italic">
+                  Chưa có cuộc trò chuyện nào...
+                </div>
+              )}
             </div>
           )}
         </div>

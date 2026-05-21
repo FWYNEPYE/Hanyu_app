@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect} from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   HiOutlineSearch, HiOutlineChevronUp, HiOutlineHeart, 
@@ -8,6 +9,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 const CommunityPage = () => {
+  const navigate = useNavigate();
   
   const [decks, setDecks] = useState([]); 
   const [previewWords, setPreviewWords] = useState([]); 
@@ -437,7 +439,7 @@ return (
         </span>
         <button 
           className="bg-slate-900 text-white px-4 py-2 rounded-xl text-[10px] font-bold uppercase"
-          onClick={() => alert("Chuyển hướng đến trang học...")}
+          onClick={() => navigate("/dashboard/game")}
         >
           Học ngay
         </button>

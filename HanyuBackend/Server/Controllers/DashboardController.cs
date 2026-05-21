@@ -17,54 +17,91 @@ namespace Server.Controllers
             _context = context;
         }
 
-                [HttpGet("stats")]
+        [HttpGet("stats")]
         public async Task<IActionResult> GetDashboardStats()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null) return Unauthorized();
-            int userId = int.Parse(userIdClaim.Value);
-
-            // Lấy thông tin User 
-            var user = await _context.Users
-                .Select(u => new { 
-                    u.UserID, 
-                    u.Username, 
-                    u.CurrentStreak,
-                    u.Points,        
-                    u.Rank,         
-                    u.AvailableAIUsage 
-                })
-                .FirstOrDefaultAsync(u => u.UserID == userId);
-
-            if (user == null) return NotFound();
-
-            // 2. Tính toán tổng số từ vựng (cho ô "Tiến độ hiện tại" 65% của mày)
-            
-            var totalVocab = await _context.Vocabularies.CountAsync(); 
-
-            //  Lấy dữ liệu biểu đồ
-            var last7Days = Enumerable.Range(0, 7)
-                .Select(i => DateTime.Today.AddDays(-i))
-                .OrderBy(d => d).ToList();
-
-            var progressData = await _context.DailyProgresses
-                .Where(p => p.UserID == userId && p.StudyDate >= DateTime.Today.AddDays(-7))
-                .ToListAsync();
-
-            var chartData = last7Days.Select(date => new
+            try
             {
-                Date = date.ToString("dd/MM"),
-                Seconds = progressData.FirstOrDefault(p => p.StudyDate.Date == date.Date)?.TotalSeconds ?? 0,
-                IsCompleted = progressData.FirstOrDefault(p => p.StudyDate.Date == date.Date)?.IsCompleted ?? false
-            });
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (userIdClaim == null) return Unauthorized();
+                int userId = int.Parse(userIdClaim.Value);
 
-            return Ok(new { 
-                UserStats = user, 
-                ActivityChart = chartData,
-                TotalVocabulary = totalVocab 
-            });
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId);
+                if (user == null) return NotFound();
+
+                // --- LOGIC RESET STREAK TỰ ĐỘNG ---
+                var today = DateTime.Today;
+                if (user.LastStudyDate.HasValue)
+                {
+                    var daysGap = (today - user.LastStudyDate.Value.Date).Days;
+
+                    if (daysGap > 1) 
+                    {
+                        user.CurrentStreak = 0;
+                        _context.Entry(user).State = EntityState.Modified;
+                        await _context.SaveChangesAsync();
+                    }
+                }
+
+                var sevenDaysAgo = DateTime.Today.AddDays(-7);
+                var newBundlesCount = await _context.Categories
+                    .CountAsync(c => c.UpdatedAt >= sevenDaysAgo);
+
+                var lastProgress = await _context.UserProgresses
+                    .Include(p => p.RoadmapStep)
+                    .Where(p => p.UserID == userId)
+                    .OrderByDescending(p => p.CompletedAt)
+                    .Select(p => new { 
+                        p.RoadmapStep.Title, 
+                        p.RoadmapStep.CategoryID 
+                    }) 
+                    .FirstOrDefaultAsync();
+
+                var suggestion = lastProgress?.Title ?? "Lộ trình HSK 1";
+                var suggestedLink = lastProgress?.CategoryID?.ToLower() ?? "hsk";
+
+                var totalVocab = await _context.Vocabularies.CountAsync();
+                
+                var last7Days = Enumerable.Range(0, 7)
+                    .Select(i => DateTime.Today.AddDays(-i))
+                    .OrderBy(d => d).ToList();
+
+                var progressData = await _context.DailyProgresses
+                    .Where(p => p.UserID == userId && p.StudyDate >= DateTime.Today.AddDays(-7))
+                    .ToListAsync();
+
+                var chartData = last7Days.Select(date => new
+                {
+                    Date = date.ToString("dd/MM"),
+                    Seconds = progressData.FirstOrDefault(p => p.StudyDate.Date == date.Date)?.TotalSeconds ?? 0,
+                    IsCompleted = progressData.FirstOrDefault(p => p.StudyDate.Date == date.Date)?.IsCompleted ?? false
+                });
+
+        
+                return Ok(new { 
+                    UserStats = new { 
+                        user.UserID, 
+                        user.Username, 
+                        user.CurrentStreak,
+                        user.Points,        
+                        user.Rank,         
+                        user.AvailableAIUsage 
+                    }, 
+                    ActivityChart = chartData,
+                    TotalVocabulary = totalVocab,
+                    NewBundlesCount = newBundlesCount, 
+                    SuggestedRoadmap = suggestion,
+                    SuggestedLink = suggestedLink 
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi hệ thống", error = ex.Message });
+            }
         }
 
+
+        
         [HttpPost("update-progress")]
         public async Task<IActionResult> UpdateProgress([FromBody] ProgressUpdateDto dto)
         {
