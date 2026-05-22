@@ -24,8 +24,13 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  define: {
-
-    'http://localhost:5252': JSON.stringify('https://hanyuapp-production.up.railway.app')
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://hanyuapp-production.up.railway.app',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   }
 })
