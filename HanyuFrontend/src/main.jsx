@@ -12,7 +12,6 @@ axios.interceptors.request.use((config) => {
   return config;
 });
 
-
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <GoogleOAuthProvider clientId="458626277443-5tadct3nv33bl5214g7n9uosp519vjq3.apps.googleusercontent.com">
