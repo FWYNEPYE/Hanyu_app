@@ -12,7 +12,7 @@ import VocabListModal from '../components/VocabListModal';
 import EditVocabModal from '../components/EditVocabModal';
 import AddWordModal from '../components/AddWordModal';
 import CreateSetModal from '../components/CreateSetModal';
-import PublishSetModal from '../components/PublishSetModal'; // Thêm import này
+import PublishSetModal from '../components/PublishSetModal';
 
 const API_BASE_URL = "http://localhost:5252/api"; 
 
@@ -76,25 +76,64 @@ const Vocabulary = () => {
   }, [location]);
 
   const handleCreateCategory = async () => {
-    if (!newCategoryName.trim()) return alert("Nhập tên bộ từ!");
-    if (!currentUserId) return alert("Vui lòng đăng nhập lại!");
+    if (!newCategoryName.trim()) {
+      alert("Nhập tên bộ từ!");
+      throw new Error("Tên bộ từ trống");
+    }
+    if (!currentUserId) {
+      alert("Vui lòng đăng nhập lại!");
+      throw new Error("Chưa đăng nhập");
+    }
 
     try {
       setLoading(true);
-      await axios.post(`${API_BASE_URL}/Category`, {
+      
+      const response = await axios.post(`${API_BASE_URL}/Category`, {
         categoryName: newCategoryName,
         categoryType: "user",
         userID: parseInt(currentUserId)
       });
       
-      alert("Tạo bộ từ thành công!");
-      setNewCategoryName("");
-      setIsCreateSetModalOpen(false);
-      await fetchData(); 
+      if (response.data) {
+        const newCreatedSet = {
+          ...response.data,
+          categoryID: String(response.data.categoryID || response.data.id),
+          isBorrowed: false
+        };
+        setCollections(prev => [...prev, newCreatedSet]);
+      }
+
+      setTimeout(() => {
+        setNewCategoryName("");
+        setIsCreateSetModalOpen(false);
+      }, 1000);
+
     } catch (err) {
       alert("Lỗi khi tạo bộ từ: " + (err.response?.data?.message || err.message));
+      throw err; 
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateCategoryName = async (categoryId, newName) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      await axios.put(`${API_BASE_URL}/Category/${categoryId}`, {
+        userID: parseInt(currentUserId),
+        categoryName: newName
+      }, { headers: { Authorization: `Bearer ${token}` } });
+
+      setCollections(prev => prev.map(cat => 
+        String(cat.categoryID) === String(categoryId) ? { ...cat, categoryName: newName } : cat
+      ));
+
+      setSelectedSet(prev => prev ? { ...prev, categoryName: newName } : null);
+
+    } catch (err) {
+      alert("Không thể đổi tên bộ từ: " + (err.response?.data?.message || err.message));
+      throw err;
     }
   };
 
@@ -117,9 +156,8 @@ const Vocabulary = () => {
         })
       ));
       
-      alert(`Đã lưu thành công ${validRows.length} từ!`);
-      setRows([{ id: Date.now(), hanzi: '', pinyin: '', meaning: '', type: '', example: '', note: '' }]);
       setIsAddModalOpen(false);
+      setRows([{ id: Date.now(), hanzi: '', pinyin: '', meaning: '', type: '', example: '', note: '' }]);
       fetchData();
     } catch (err) {
       alert("Lỗi khi lưu từ vựng: " + (err.response?.data?.message || err.message));
@@ -130,17 +168,15 @@ const Vocabulary = () => {
 
   const handleUpdateWord = async () => {
     try {
-      const idToUpdate = editingWord.vocaId || editingWord.VocaId;
-      if (!idToUpdate) return alert("Lỗi: Không tìm thấy VocaId!");
+      const idToUpdate = editingWord.vocaId || editingWord.VocaId || editingWord.id;
+      if (!idToUpdate) throw new Error("Lỗi: Không tìm thấy VocaId!");
 
       const dataToSend = { ...editingWord, VocaId: idToUpdate };
       await axios.put(`${API_BASE_URL}/Vocabulary/${idToUpdate}`, dataToSend); 
-
-      alert("Cập nhật thành công!");
-      setEditingWord(null); 
-      fetchData(); 
+      await fetchData(); 
     } catch (err) {
-      alert("Lỗi cập nhật: " + (err.response?.data?.message || err.message));
+      console.error("Lỗi cập nhật từ vựng:", err);
+      throw err;
     }
   };
 
@@ -162,7 +198,6 @@ const Vocabulary = () => {
 
     try {
         await axios.delete(`${API_BASE_URL}/Vocabulary/${wordId}`);
-        alert("Xóa từ thành công!");
         setVocabData(prev => prev.filter(v => (v.vocaId || v.id) !== wordId)); 
         fetchData(); 
     } catch (err) {
@@ -200,7 +235,7 @@ const Vocabulary = () => {
         isPublic: true, 
         price: parseInt(publicPrice) || 0,
         description: publicDesc,
-        icon: publicIcon,       
+        icon: publicIcon,      
         themeColor: publicColor,  
         tags: publicTag,
         wordCount: currentWordCount 
@@ -223,8 +258,6 @@ const Vocabulary = () => {
           window.dispatchEvent(new Event("updatePoints")); 
           triggerCoinFly();
           alert(`🎉 Chúc mừng! Bạn nhận được thêm ${addedPoints} điểm thưởng. \nTổng điểm hiện tại: ${totalPoints}`);
-      } else {
-        alert(response.data.message || "Cập nhật thành công!");
       }
 
       setIsPublicModalOpen(false);
@@ -255,7 +288,6 @@ const Vocabulary = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      alert("Đã chuyển bộ từ về chế độ Riêng tư.");
       setCollections(prev => prev.map(cat => 
         cat.categoryID === set.categoryID ? { ...cat, isPublic: false } : cat
       ));
@@ -265,55 +297,55 @@ const Vocabulary = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-10 px-4 animate-in fade-in duration-500 font-sans">
+    <div className="max-w-7xl mx-auto space-y-4 sm:space-y-8 pb-24 sm:pb-10 px-3 sm:px-4 animate-in fade-in duration-500 font-sans">
       
       {/* --- HEADER --- */}
-      <div className="bg-white/70 backdrop-blur-xl p-4 sm:p-6 rounded-[35px] border border-white shadow-xl flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
-            <HiOutlineAcademicCap size={26} />
+      <div className="bg-white/70 backdrop-blur-xl p-3.5 sm:p-6 rounded-[20px] sm:rounded-[35px] border border-white shadow-xl flex justify-between items-center">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-lg">
+            <HiOutlineAcademicCap size={22} className="sm:size-[26px]" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-gray-800 tracking-tight">Kho Từ Vựng</h2>
+            <h2 className="text-lg sm:text-xl font-black text-gray-800 tracking-tight">Kho Từ Vựng</h2>
           </div>
         </div>
         <div className="flex items-center gap-4">
           <button 
             type="button"
             onClick={() => setIsAddModalOpen(true)}
-            className="px-6 py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-[20px] text-xs font-black shadow-lg shadow-red-100 transition-all active:scale-95 flex items-center gap-2"
+            className="px-4 py-2.5 sm:px-6 sm:py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-xl sm:rounded-[20px] text-xs font-black shadow-lg shadow-red-100 transition-all active:scale-95 flex items-center gap-1.5"
           >
-            <HiOutlinePlusCircle size={18} /> <span className="hidden sm:inline">THÊM TỪ MỚI</span>
+            <HiOutlinePlusCircle size={18} /> <span>THÊM TỪ MỚI</span>
           </button>
         </div>
       </div>
 
-      {/* --- DANH SÁCH BỘ TỪ --- */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-8">
+      {/* --- DANH SÁCH BỘ TỪ (Đã sửa responsive từ 1 cột mượt lên nhiều cột) --- */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
         {collections.map((set) => (
           <div 
             key={`set-${set.categoryID}-${set.isBorrowed}`}
             onClick={() => setSelectedSet(set)}
-            className="bg-white p-4 sm:p-8 rounded-[25px] sm:rounded-[40px] border border-gray-100 shadow-sm hover:shadow-2xl transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between min-h-[160px] sm:min-h-[220px]"
+            className="bg-white p-5 sm:p-8 rounded-[20px] sm:rounded-[40px] border border-gray-100 shadow-sm hover:shadow-2xl transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between min-h-[140px] sm:min-h-[220px]"
           >
-            <div className="flex justify-between items-start mb-2">
+            <div className="flex justify-between items-start mb-3 sm:mb-2">
               <div className={`w-10 h-10 sm:w-14 sm:h-14 ${set.categoryType === 'system' ? 'bg-slate-800' : 'bg-orange-500'} rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-lg`}>
                 <HiOutlineCollection className="text-xl sm:text-2xl" />
               </div>
               <button 
                 type="button"
                 onClick={(e) => handleDeleteCollection(e, set.categoryID)}
-                className="p-2.5 sm:p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm active:scale-90"
+                className="p-2 sm:p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm active:scale-90"
               >
                 <HiOutlineTrash size={18} />
               </button>
             </div>
 
-            <div className="mb-8 sm:mb-12">
-              <h3 className="text-sm sm:text-2xl font-black text-gray-800 mb-0.5 sm:mb-1 line-clamp-1">
+            <div className="mb-4 sm:mb-12">
+              <h3 className="text-base sm:text-2xl font-black text-gray-800 mb-1 line-clamp-1">
                 {set.categoryName}
               </h3>
-              <p className="text-[10px] sm:text-sm font-bold text-gray-400">
+              <p className="text-xs sm:text-sm font-bold text-gray-400">
                 {vocabData.filter(v => v.categoryID === set.categoryID).length} từ vựng
               </p>
             </div>
@@ -330,7 +362,7 @@ const Vocabulary = () => {
                         setTargetCategory(set);
                         setIsPublicModalOpen(true);
                       }}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all
+                      className={`flex items-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-xl border transition-all text-[11px] sm:text-[10px]
                         ${set.isBorrowed 
                           ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed' 
                           : set.isPublic 
@@ -339,7 +371,7 @@ const Vocabulary = () => {
                         }`}
                     >
                       {set.isBorrowed ? <HiOutlineSave size={16}/> : <HiOutlineGlobeAlt size={16}/>}
-                      <span className="text-[10px] font-black uppercase tracking-wider">
+                      <span className="font-black uppercase tracking-wider">
                         {set.isBorrowed ? "Đã lưu từ cộng đồng" : (set.isPublic ? "Đã công khai" : "Đăng cộng đồng")}
                       </span>
                     </button>
@@ -348,10 +380,10 @@ const Vocabulary = () => {
                       <button
                         type="button"
                         onClick={(e) => handleSetPrivate(e, set)}
-                        className="p-1.5 sm:p-2 bg-gray-50 text-gray-400 rounded-lg hover:bg-red-50 hover:text-red-500 transition-all border border-transparent hover:border-red-100"
+                        className="p-2 bg-gray-50 text-gray-400 rounded-lg hover:bg-red-50 hover:text-red-500 transition-all border border-transparent hover:border-red-100"
                         title="Hủy công khai"
                       >
-                        <HiOutlineLockClosed className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <HiOutlineLockClosed className="w-4 h-4" />
                       </button>
                     )}
                   </>
@@ -363,8 +395,7 @@ const Vocabulary = () => {
         ))}
       </div>
 
-      {/* --- CÁC MODAL ĐƯỢC QUẢN LÝ TẬP TRUNG --- */}
-      
+      {/* --- CÁC MODAL --- */}
       {selectedSet && (
         <VocabListModal 
           selectedSet={selectedSet}
@@ -373,6 +404,7 @@ const Vocabulary = () => {
           setEditingWord={setEditingWord}
           speakHanzi={speakHanzi}
           handleDeleteWord={handleDeleteWord}
+          onUpdateCategoryName={handleUpdateCategoryName}
         />
       )}
 
@@ -407,7 +439,6 @@ const Vocabulary = () => {
         loading={loading}
       />
 
-      {/* Sử dụng component con được import từ bên ngoài */}
       <PublishSetModal 
         isOpen={isPublicModalOpen}
         targetCategory={targetCategory}

@@ -19,7 +19,7 @@ builder.Services.AddAuthentication(options =>
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
-        // Lưu ý: Chuỗi Key này nên để trong appsettings.json khi deploy thật
+        // Lấy Key từ appsettings.json, nếu không có mới dùng chuỗi fallback an toàn
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "Chuoi_Bi_Mat_Cuc_Ky_Dai_Va_Ba_Dao_Cua_Anh_Hehehehehe_Hehehehehehe_Hehehehehehehe_Hehehehehehehe")), 
         ValidateIssuer = false,
         ValidateAudience = false,
@@ -27,15 +27,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// --- 2. CẤU HÌNH CONTROLLERS & JSON ---
-// builder.Services.AddControllers()
-//     .AddJsonOptions(options =>
-//     {
-//         // Tránh lỗi vòng lặp vô tận khi trả về dữ liệu có quan hệ n-n
-//         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;   
-//         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
-//     });
-
+// --- 2. CẤU HÌNH CONTROLLERS & JSON (NEWTONSOFT) ---
 builder.Services.AddControllers()
     .AddNewtonsoftJson(options =>
     {
@@ -54,54 +46,70 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// --- 4. ĐĂNG KÝ DEPENDENCY INJECTION (CHỖ SẾP BỊ LỖI LÀ Ở ĐÂY) ---
-
-// Đăng ký Service cấu hình hệ thống (Dòng này cực kỳ quan trọng để fix lỗi 500)
+// --- 4. ĐĂNG KÝ DEPENDENCY INJECTION ---
 builder.Services.AddScoped<ISystemConfigService, SystemConfigService>();
-
-// Đăng ký GroqService tích hợp HttpClient
 builder.Services.AddHttpClient<GroqService>();
 
-// Nếu sếp có dùng AI Service hay Dictionary Service khác thì đăng ký thêm ở đây:
-// builder.Services.AddScoped<IDictionaryService, DictionaryService>();
-
-
-// --- 5. CẤU HÌNH CORS & ROUTING ---
+// --- 5. CẤU HÌNH CORS (Đã bảo mật cho Production) ---
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll",
+    // Dùng cho môi trường Local
+    options.AddPolicy("AllowDevelopment",
         policy => policy.AllowAnyOrigin()
                         .AllowAnyMethod()
                         .AllowAnyHeader());
+
+    // Dùng khi đem đi Deploy thật (Chỉ cho phép ứng dụng React của bạn gọi tới)
+    options.AddPolicy("AllowProduction",
+        policy => policy.WithOrigins(builder.Configuration["AllowedOrigins"] ?? "https://your-react-app.vercel.app") 
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials()); // Cần nếu sau này bạn dùng Cookie/Refresh Token
 });
 
 builder.Services.AddRouting(options => options.LowercaseUrls = true);
 
 var app = builder.Build();
+
+// Cấu hình Culture toàn cục
 var cultureInfo = new System.Globalization.CultureInfo("en-US");
 System.Globalization.CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
 System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
+// --- 6. CẤU HÌNH MIDDLEWARE (THỨ TỰ CHUẨN MICROSOFT) ---
 
-// --- 6. CẤU HÌNH MIDDLEWARE (THỨ TỰ RẤT QUAN TRỌNG) ---
+// 1. Phục vụ file tĩnh trước khi xử lý Routing/Auth để tối ưu hiệu năng
+app.UseStaticFiles();
 
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Hanyu API V1");
+        // Dùng đường dẫn tương đối để tránh lỗi hiển thị khi deploy qua proxy/sub-domain
+        c.SwaggerEndpoint("v1/swagger.json", "Hanyu API V1");
         c.RoutePrefix = "swagger"; 
     });
 }
 
+// 2. Định tuyến URL
 app.UseRouting();
-app.UseCors("AllowAll");
 
+// 3. Áp dụng CORS dựa trên môi trường chạy
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors("AllowDevelopment");
+}
+else
+{
+    app.UseCors("AllowProduction");
+}
+
+// 4. Bảo mật (Authentication PHẢI chạy trước Authorization)
 app.UseAuthentication(); 
 app.UseAuthorization(); 
 
-app.UseStaticFiles();
+// 5. Áp dụng Controller endpoints cuối cùng
 app.MapControllers();
 
 app.Run();

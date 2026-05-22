@@ -371,14 +371,14 @@ const calculateProgress = (categoryName) => {
       <div className="flex flex-col lg:flex-row gap-5">
         <div className="flex-[1.8] bg-gradient-to-br from-red-600 to-pink-600 rounded-[35px] p-6 md:p-8 text-white relative overflow-hidden shadow-xl shadow-red-100/50 flex flex-col justify-center">
          <div className="relative z-10">
-  <h1 className="text-2xl md:text-3xl font-black mb-2 tracking-tighter">
-    Xin chào, {backendData?.userStats?.username || "NGƯỜI HỌC"}! 👋
-  </h1>
+          <h1 className="text-2xl md:text-3xl font-black mb-2 tracking-tighter">
+            Xin chào, {backendData?.userStats?.username || "NGƯỜI HỌC"}! 👋
+          </h1>
 
-  {/* Hiển thị số bộ từ mới dựa trên NewBundlesCount */}
-  <p className="text-red-50 font-bold text-xs md:text-sm max-w-sm opacity-90 leading-relaxed">
-    🔥 Cộng đồng vừa cập nhật thêm <span className="text-white underline">{backendData?.newBundlesCount || 0} bộ từ mới</span> tuần này.
-  </p>
+          {/* Hiển thị số bộ từ mới dựa trên NewBundlesCount */}
+          <p className="text-red-50 font-bold text-xs md:text-sm max-w-sm opacity-90 leading-relaxed">
+            🔥 Cộng đồng vừa cập nhật thêm <span className="text-white underline">{backendData?.newBundlesCount || 0} bộ từ mới</span> tuần này.
+          </p>
 
   {/* Nút bấm dẫn đến đúng lộ trình đang học dở */}
   <Link to={`/dashboard/roadmap/${backendData?.suggestedLink || 'hsk'}`}>
@@ -397,12 +397,16 @@ const calculateProgress = (categoryName) => {
             <span className="font-black uppercase tracking-widest text-[10px]">Chuỗi ngày học</span>
           </div>
           <div className="flex items-baseline gap-1.5 mb-4">
-  {/* Lấy currentStreak từ backend data trả về */}
-  <span className="text-4xl font-black "> 
-    {isGoalReached ? (backendData?.userStats?.currentStreak || 0) : (backendData?.userStats?.currentStreak || 0)}
-  </span>
-  <span className="text-sm font-bold opacity-90 uppercase text-white">Ngày</span>
-</div>
+
+          {/* Lấy currentStreak từ backend data trả về */}
+          <span className="text-4xl font-black "> 
+            {isGoalReached ? (backendData?.userStats?.currentStreak || 0) : (backendData?.userStats?.currentStreak || 0)}
+          </span>
+          <span className="text-sm font-bold opacity-90 uppercase text-white">Ngày</span>
+        </div>
+
+
+        
           {!isGoalReached && (
             <div className="absolute top-4 right-4 animate-pulse flex items-center gap-1 bg-red-500 px-2 py-1 rounded-full">
                 <HiOutlineExclamationCircle size={12}/>

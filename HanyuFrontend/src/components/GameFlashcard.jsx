@@ -233,14 +233,14 @@ const GameFlashcard = ({ data, onBack }) => {
       {isGameOver && (
         <div className="fixed inset-0 z-[110] bg-white overflow-y-auto flex flex-col items-center p-8 animate-in fade-in duration-500">
           <div className="max-w-2xl w-full flex flex-col items-center">
-            <span className="text-7xl mb-4">{isPerfect ? "🏆" : "🤪"}</span>
-            <h2 className="text-3xl font-black mb-2 uppercase italic text-gray-800">
+            <span className="text-4xl mb-4">{isPerfect ? "🏆" : "🤪"}</span>
+            <h2 className="text-2xl font-black mb-2 uppercase italic text-gray-800">
               {isPerfect ? "XUẤT SẮC!" : "Hơi gàaaa!"}
             </h2>
             
             <div className="my-6 border-y border-gray-100 py-6 px-10 text-center w-full">
-                <p className="text-gray-400 font-black uppercase text-[10px] mb-2 tracking-widest">Điểm đạt được</p>
-                <p className="text-6xl font-black text-indigo-500">{score} / {cards.length}</p>
+                <p className="text-gray-400 font-black uppercase text-[13px] mb-0 tracking-widest">Điểm đạt được</p>
+                <p className="text-4xl font-black text-indigo-500">{score} / {cards.length}</p>
             </div>
 
             {/* DANH SÁCH TỪ QUÊN */}
@@ -256,7 +256,7 @@ const GameFlashcard = ({ data, onBack }) => {
                         <p className="text-xl font-black text-red-600">{card.hanzi}</p>
                         <p className="text-xs text-red-400 font-medium">{card.pinyin}</p>
                       </div>
-                      <p className="text-sm font-bold text-red-700">{card.meaning}</p>
+                      <p className=" text-sm font-bold ml-4 text-red-700">{card.meaning}</p>
                     </div>
                   ))}
                 </div>

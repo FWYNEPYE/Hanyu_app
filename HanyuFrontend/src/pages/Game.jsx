@@ -144,7 +144,7 @@ const Game = () => {
     const currentLabel = getSelectedLabel(type);
 
     return (
-      <div className="relative flex-1">
+      <div className="relative flex-1 ">
         <p className="ml-4 text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{label}</p>
         <button 
           onClick={() => setOpenDropdown(isOpen ? null : type)}
@@ -230,12 +230,12 @@ const Game = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 pb-20 space-y-10 animate-in fade-in duration-500">
+    <div className="max-w-7xl mx-auto px-4 pb-8 space-y-4 animate-in fade-in duration-500">
       {isLoading && <div className="fixed inset-0 z-[200] bg-white/80 backdrop-blur-sm flex items-center justify-center">Loading...</div>}
 
       {/* BLOCK DROPDOWNS */}
-      <div className="bg-white/80 backdrop-blur-xl p-4 sm:p-6 rounded-[40px] border border-white shadow-xl max-w-6xl mx-auto mt-8 relative z-[60]">
-        <div className="flex flex-col md:flex-row gap-4">
+      <div className="bg-white/80 backdrop-blur-xl p-4 sm:p-6 rounded-[40px] border border-white shadow-xl max-w-6xl mx-auto mt-0 relative z-[40]">
+        <div className="flex flex-col md:flex-row gap-2">
           
           {/* DROPDOWN NGUỒN TỪ VỰNG */}
           <CustomDropdown 
@@ -271,11 +271,11 @@ const Game = () => {
             <div className={`absolute inset-0 bg-gradient-to-br ${mode.color} rounded-[30px] sm:rounded-[50px] blur-2xl opacity-0 group-hover:opacity-10 transition-all duration-500`} />
             <div className={`relative ${mode.bgColor} border border-white/50 rounded-[30px] sm:rounded-[50px] p-5 sm:p-10 h-full flex flex-col items-center text-center transition-all duration-500 group-hover:-translate-y-3 group-hover:shadow-2xl`}>
               <div className={`w-14 h-14 sm:w-24 sm:h-24 mb-4 sm:mb-8 rounded-[20px] sm:rounded-[35px] bg-gradient-to-br ${mode.color} flex items-center justify-center text-white shadow-xl group-hover:rotate-6 transition-all duration-500`}>
-                <mode.icon className="text-2xl sm:text-5xl" />
+                <mode.icon className="text-3xl sm:text-6xl" />
               </div>
-              <h3 className="text-sm sm:text-2xl font-black text-gray-800 mb-1 sm:mb-3">{mode.title}</h3>
-              <p className="text-[10px] sm:text-sm text-gray-500 font-medium mb-6 sm:mb-10 px-1 italic leading-tight">{mode.desc}</p>
-              <div className="mt-auto w-full py-3 sm:py-4.5 rounded-[15px] sm:rounded-[25px] bg-white/60 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300 font-black text-[9px] sm:text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 border border-white/40">
+              <h3 className="text-xl sm:text-2xl font-black text-gray-800 mb-1 sm:mb-3">{mode.title}</h3>
+              <p className="text-[13px] sm:text-base text-gray-500 font-medium mb-6 sm:mb-10 px-1  leading-tight">{mode.desc}</p>
+              <div className="mt-auto w-full py-3 sm:py-4.5 rounded-[15px] sm:rounded-[25px] bg-white/60 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300 font-black text-[11px] sm:text-[13px] uppercase tracking-widest flex items-center justify-center gap-2 border border-white/40">
                 Bắt đầu <HiOutlineTrendingUp className="text-xs sm:text-base" />
               </div>
             </div>
@@ -289,7 +289,7 @@ const Game = () => {
           <div className="text-center lg:text-left space-y-3">
             <div className="inline-block bg-red-600 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Smart Memory</div>
             <h2 className="text-2xl sm:text-4xl font-black tracking-tighter leading-tight">Ôn tập Ngắt quãng (SRS)</h2>
-            <p className="text-xs sm:text-gray-400 max-w-xl font-medium">Luyện tập những từ khó dựa trên dữ liệu cá nhân</p>
+            <p className="text-sm sm:text-gray-400 max-w-xl font-medium">Luyện tập những từ khó dựa trên dữ liệu cá nhân</p>
           </div>
           <button 
             onClick={() => {

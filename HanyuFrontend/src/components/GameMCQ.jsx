@@ -17,7 +17,25 @@ const GameMCQ = ({ data, onBack, allVocabs = [] }) => { // Nhận data từ Game
 
   const navigate = useNavigate();
 
-  // --- 1. LOGIC CHẶN VUỐT BACK  ---
+  // --- 0. LOGIC ĐẾM NGƯỢC THỜI GIAN (ĐÃ SỬA: HẾT GIỜ LÀ END GAME) ---
+  useEffect(() => {
+    if (isGameOver || isLoading || showModal || selectedAnswer) return;
+
+    // SỬA TẠI ĐÂY: Nếu thời gian về 0, không chuyển câu nữa mà END GAME luôn
+    if (timeLeft === 0) {
+      setIsGameOver(true);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, isGameOver, isLoading, showModal, selectedAnswer]);
+
+
+  // --- 1. LOGIC CHẶN VUỐT BACK ---
   useEffect(() => {
     if (isGameOver) return;
     window.history.pushState(null, "", window.location.pathname);
@@ -29,7 +47,7 @@ const GameMCQ = ({ data, onBack, allVocabs = [] }) => { // Nhận data từ Game
     return () => window.removeEventListener('popstate', handlePopState);
   }, [isGameOver]);
 
-  // --- 2. LOGIC HỨNG TÍN HIỆU TỪ SIDEBAR  ---
+  // --- 2. LOGIC HỨNG TÍN HIỆU TỪ SIDEBAR ---
   useEffect(() => {
     const checkTrigger = setInterval(() => {
       const trigger = localStorage.getItem('show_exit_trigger');
@@ -56,37 +74,29 @@ const GameMCQ = ({ data, onBack, allVocabs = [] }) => { // Nhận data từ Game
     }
   };
 
-  // --- 3. LOGIC TẠO CÂU HỎI TỪ DATA THẬT ---
- // --- 3. LOGIC TẠO CÂU HỎI TỔNG LỰC (ĐÃ FIX LAG & ĐÁP ÁN PHỤ) ---
+  // --- 3. LOGIC TẠO CÂU HỎI TỔNG LỰC ---
   useEffect(() => {
-    // Nếu chưa có data hoặc đã trộn xong rồi thì không làm gì cả
     if (!data || data.length === 0 || questions.length > 0) return;
 
     const generateQuestions = () => {
       try {
-        // Lấy nguồn từ pool tổng để làm đáp án nhiễu
         const pool = (allVocabs && allVocabs.length > 0) ? allVocabs : data;
 
         const formatted = data.map((item) => {
-          // Bắt đúng tên biến từ Model C# (VocaId, Meaning...)
           const currentId = item.vocaId || item.VocaId;
           const currentMeaning = item.meaning || item.Meaning;
 
-          // Lọc danh sách đáp án sai
           let distractors = pool
             .filter(d => (d.vocaId || d.VocaId) !== currentId)
             .map(d => d.meaning || d.Meaning)
             .filter(m => m && m !== currentMeaning);
 
-          // Xóa trùng lặp
           distractors = [...new Set(distractors)];
 
-          // Trộn và lấy 3 từ sai
           let shuffledDistractors = distractors
             .sort(() => 0.5 - Math.random())
             .slice(0, 3);
 
-          // Chống cháy nếu bộ từ quá ít: Dùng mảng từ thông dụng thay vì "Đáp án phụ"
           const backup = ["Học tập", "Sức khỏe", "Thành công", "Vui vẻ", "Gia đình"];
           let bIdx = 0;
           while (shuffledDistractors.length < 3) {
@@ -97,7 +107,6 @@ const GameMCQ = ({ data, onBack, allVocabs = [] }) => { // Nhận data từ Game
             bIdx++;
           }
 
-          // Gộp đáp án đúng và trộn lần cuối
           const options = [...shuffledDistractors, currentMeaning].sort(() => 0.5 - Math.random());
 
           return {
@@ -110,7 +119,7 @@ const GameMCQ = ({ data, onBack, allVocabs = [] }) => { // Nhận data từ Game
         });
 
         setQuestions(formatted);
-        setIsLoading(false); // Tắt loading cực nhanh
+        setIsLoading(false); 
       } catch (err) {
         console.error("Lỗi trộn game:", err);
         setIsLoading(false);
@@ -120,7 +129,6 @@ const GameMCQ = ({ data, onBack, allVocabs = [] }) => { // Nhận data từ Game
     generateQuestions();
   }, [data, allVocabs, questions.length]); 
 
-  // Hàm initGame này giờ chỉ dùng để reset game khi nhấn "Chơi lại"
   const initGame = () => {
     setQuestions([]);
     setIsLoading(true);
@@ -142,7 +150,7 @@ const GameMCQ = ({ data, onBack, allVocabs = [] }) => { // Nhận data từ Game
     setTimeout(() => {
       if (currentIdx < questions.length - 1) {
         setCurrentIdx(prev => prev + 1);
-        setTimeLeft(15);
+        setTimeLeft(15); 
         setSelectedAnswer(null);
       } else {
         setIsGameOver(true);
@@ -213,15 +221,15 @@ const GameMCQ = ({ data, onBack, allVocabs = [] }) => { // Nhận data từ Game
       </div>
 
       {/* MAIN GAME */}
-      <div className="w-full max-w-2xl bg-white p-8 sm:p-14 rounded-[50px] md:rounded-[60px] shadow-2xl text-center border border-white relative">
+      <div className="w-full max-w-2xl bg-white p-4 sm:p-8 rounded-[50px] md:rounded-[60px] shadow-2xl text-center border border-white relative">
         <div className="flex flex-col items-center mb-8 md:mb-12">
-            <h3 className="text-3xl md:text-5xl font-black text-gray-800 mb-2 tracking-tighter">{questions[currentIdx]?.word}</h3>
-            <p className="text-gray-400 font-black mb-6 md:mb-10 text-xl tracking-widest">/{questions[currentIdx]?.pinyin}/</p>
+            <h3 className="text-2xl md:text-3xl font-black text-gray-800 mb-2 tracking-tighter">{questions[currentIdx]?.word}</h3>
+            <p className="text-gray-400 font-black mb-1 md:mb-4 text-base tracking-widest">/{questions[currentIdx]?.pinyin}/</p>
             <button 
               onClick={() => playAudio(questions[currentIdx]?.word)}
-              className="bg-indigo-600 text-white p-4 md:p-5 rounded-full shadow-xl hover:scale-110 active:scale-95 transition-all"
+              className="bg-indigo-600 text-white p-2 md:p-3 rounded-full shadow-xl hover:scale-110 active:scale-95 transition-all"
             >
-                <HiOutlineVolumeUp size={28} />
+                <HiOutlineVolumeUp size={23} />
             </button>
         </div>
 
@@ -238,7 +246,7 @@ const GameMCQ = ({ data, onBack, allVocabs = [] }) => { // Nhận data từ Game
                 onClick={() => handleAnswer(opt)} 
                 disabled={!!selectedAnswer}
                 className={`
-                  py-4 md:py-6 rounded-[25px] md:rounded-[30px] font-bold text-sm md:text-lg whitespace-normal break-words text-center transition-all active:scale-95 border-4
+                  py-4 md:py-6 rounded-[25px] md:rounded-[30px] font-bold text-sm md:text-base whitespace-normal break-words text-center transition-all active:scale-95 border-4
                   ${isCorrectChoice || shouldShowGreen ? 'bg-green-500 border-green-200 text-white' : 
                     isWrongChoice ? 'bg-red-500 border-red-200 text-white animate-shake' : 
                     'bg-gray-50 border-transparent text-slate-600 hover:bg-white hover:border-indigo-100'}
@@ -258,11 +266,11 @@ const GameMCQ = ({ data, onBack, allVocabs = [] }) => { // Nhận data từ Game
             {isPerfect ? "🏆" : "💪"}
           </span>
           <h2 className={`text-3xl font-black mb-2 italic uppercase ${isPerfect ? 'text-gray-800' : 'text-red-500'}`}>
-            {isPerfect ? "XUẤT SẮC!" : "CỐ GẮNG HƠN NÀO!"}
+            {isPerfect ? "XUẤT SẮC!" : "HẾT GIỜ RỒI!"}
           </h2>
           <div className="my-8 border-y border-gray-100 py-6 px-10">
               <p className="text-gray-400 font-black uppercase tracking-widest text-[10px] mb-2">Điểm đạt được</p>
-              <p className={`text-7xl font-black ${isPerfect ? 'text-[#72C100]' : 'text-red-400'}`}>{score}</p>
+              <p className={`text-4xl font-black ${isPerfect ? 'text-[#72C100]' : 'text-red-400'}`}>{score}</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
               <button onClick={initGame} className="px-8 py-5 bg-gray-100 text-gray-600 rounded-[25px] font-black uppercase text-xs tracking-widest active:scale-95 transition-all">Chơi lại</button>
