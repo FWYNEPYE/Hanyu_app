@@ -3,6 +3,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://hanyuapp-production.up.railway.app/api/:path*"
+    },
+    {
+      "source": "http://localhost:5252/api/:path*",
+      "destination": "https://hanyuapp-production.up.railway.app/api/:path*"
     }
   ]
 }
