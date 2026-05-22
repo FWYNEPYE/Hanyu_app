@@ -16,7 +16,7 @@ const QuizManagement = () => {
   // 1. Load dữ liệu từ API
   const fetchPuzzles = async () => {
     try {
-      const res = await axios.get('http://localhost:5252/api/AdminQuiz/all');
+      const res = await axios.get('/api/AdminQuiz/all');
       setPuzzles(res.data);
     } catch (err) { console.error("Lỗi rồi sếp:", err); }
   };
@@ -30,10 +30,10 @@ const handleSubmit = async () => {
   try {
     if (editingId) {
       // Chế độ CẬP NHẬT
-      await axios.put(`http://localhost:5252/api/AdminQuiz/update/${editingId}`, formData);
+      await axios.put(`/api/AdminQuiz/update/${editingId}`, formData);
     } else {
       // Chế độ THÊM MỚI
-      await axios.post('http://localhost:5252/api/AdminQuiz/add', formData);
+      await axios.post('/api/AdminQuiz/add', formData);
     }
     
     // Reset mọi thứ về ban đầu
@@ -49,7 +49,7 @@ const handleSubmit = async () => {
   // Xử lý xóa
   const handleDelete = async (id) => {
     if (window.confirm("Xóa câu này là mất luôn dữ liệu học của user đó sếp?")) {
-      await axios.delete(`http://localhost:5252/api/AdminQuiz/delete/${id}`);
+      await axios.delete(`/api/AdminQuiz/delete/${id}`);
       fetchPuzzles();
     }
   };

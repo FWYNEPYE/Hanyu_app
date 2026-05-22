@@ -11,7 +11,7 @@ import { HiChevronLeft } from "react-icons/hi";
 import YouTube from 'react-youtube';
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:5252/api/Videos';
+const BASE_URL = '/api/Videos';
 
 const VideoLearning = () => {
     
@@ -159,8 +159,8 @@ useEffect(() => {
         if (!currentUserId) return;
 
         try {
-            // API sẽ gọi: http://localhost:5252/api/Category/user/7
-            const res = await axios.get(`http://localhost:5252/api/Category/user/${currentUserId}`); 
+            // API sẽ gọi: /api/Category/user/7
+            const res = await axios.get(`/api/Category/user/${currentUserId}`); 
             
             console.log("Dữ liệu trả về:", res.data);
 
@@ -182,7 +182,7 @@ useEffect(() => {
     const handleCreateGroup = async () => {
         if (!newGroupName.trim() || !currentUserId) return;
         try {
-            const res = await axios.post(`http://localhost:5252/api/Category`, { 
+            const res = await axios.post(`/api/Category`, { 
                 categoryName: newGroupName,
                 userID: parseInt(currentUserId), 
                 categoryType: "user"
@@ -210,7 +210,7 @@ useEffect(() => {
             note: activeWord.note || "Lưu từ video"
         };
 
-        const res = await axios.post(`http://localhost:5252/api/Vocabulary`, payload);
+        const res = await axios.post(`/api/Vocabulary`, payload);
         
         if (res.status === 200 || res.status === 201) {
             setActiveWord(null);

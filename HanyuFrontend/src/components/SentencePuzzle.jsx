@@ -37,7 +37,7 @@ const SentencePuzzle = ({ puzzleData, userId, onRefresh, triggerCoinFly, fetchUs
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
-        await axios.post('http://localhost:5252/api/social/complete-puzzle', 
+        await axios.post('/api/social/complete-puzzle', 
           { 
             puzzleId: puzzleData.id, 
             points: puzzleData.points 

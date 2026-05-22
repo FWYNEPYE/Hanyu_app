@@ -49,7 +49,7 @@ const Dashboard = () => {
       const token = localStorage.getItem("token");
       if (!token) { navigate("/login"); return; }
       
-      const res = await axios.get("http://localhost:5252/api/User/profile", {
+      const res = await axios.get("/api/User/profile", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUser(res.data);
@@ -68,7 +68,7 @@ const Dashboard = () => {
   const handleUpdateName = async () => {
     try {
       const token = localStorage.getItem("token");
-      await axios.put("http://localhost:5252/api/User/update-name", 
+      await axios.put("/api/User/update-name", 
         { newName: tempName },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -85,7 +85,7 @@ const handleExchange = async (cost, amount) => {
     const token = localStorage.getItem("token");
     
     // Gửi đúng một object có 2 trường cost và amount
-    const response = await axios.post("http://localhost:5252/api/User/exchange-credits", 
+    const response = await axios.post("/api/User/exchange-credits", 
       { 
         cost: Number(cost), 
         amount: Number(amount) 
@@ -111,7 +111,7 @@ const handleExchange = async (cost, amount) => {
 const handleAddPoints = async (amount) => {
     try {
         const token = localStorage.getItem("token");
-        await axios.post("http://localhost:5252/api/User/add-points", 
+        await axios.post("/api/User/add-points", 
             { pointsToAdd: amount }, // Gửi đúng tên field là pointsToAdd
             { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -151,7 +151,7 @@ useEffect(() => {
 
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.post("http://localhost:5252/api/User/update-avatar", formData, {
+      const res = await axios.post("/api/User/update-avatar", formData, {
         headers: { 
           "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${token}` 
@@ -167,7 +167,7 @@ useEffect(() => {
   const fetchNotifications = async () => {
   try {
     const token = localStorage.getItem("token");
-    const res = await axios.get("http://localhost:5252/api/Notification/user-notifications", {
+    const res = await axios.get("/api/Notification/user-notifications", {
       headers: { Authorization: `Bearer ${token}` }
     });
     setNotifications(res.data);
@@ -182,7 +182,7 @@ const handleMarkAsRead = async (notiId) => {
   try {
     const token = localStorage.getItem("token");
     // Gọi API cập nhật DB
-    await axios.post(`http://localhost:5252/api/Notification/mark-as-read/${notiId}`, {}, {
+    await axios.post(`/api/Notification/mark-as-read/${notiId}`, {}, {
       headers: { Authorization: `Bearer ${token}` }
     });
 

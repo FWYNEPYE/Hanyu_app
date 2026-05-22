@@ -25,7 +25,7 @@ const GameManagement = () => {
 
   const fetchGames = async () => {
     try {
-      const response = await axios.get("http://localhost:5252/api/Minigame/settings");
+      const response = await axios.get("/api/Minigame/settings");
       const mergedData = response.data.map(dbGame => ({
         ...dbGame,
         ...gameUIConfig[dbGame.gameId] 
@@ -70,9 +70,9 @@ const handleAddNew = () => {
   const saveConfig = async () => {
     try {
       if (editingGame.isNew) {
-        await axios.post(`http://localhost:5252/api/Minigame/settings`, editingGame);
+        await axios.post(`/api/Minigame/settings`, editingGame);
       } else {
-        await axios.put(`http://localhost:5252/api/Minigame/settings/${editingGame.gameId}`, editingGame);
+        await axios.put(`/api/Minigame/settings/${editingGame.gameId}`, editingGame);
       }
       fetchGames(); 
       setIsConfigOpen(false);
@@ -85,7 +85,7 @@ const handleAddNew = () => {
   const toggleStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === 'Active' ? 'Maintenance' : 'Active';
     try {
-      await axios.put(`http://localhost:5252/api/Minigame/settings/${id}/status`, 
+      await axios.put(`/api/Minigame/settings/${id}/status`, 
         JSON.stringify(newStatus), 
         { headers: { 'Content-Type': 'application/json' } }
       );

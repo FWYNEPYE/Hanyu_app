@@ -18,7 +18,7 @@ const SystemConfig = () => {
 
   const fetchSettings = async () => {
     try {
-      const res = await axios.get('http://localhost:5252/api/AdminConfigs');
+      const res = await axios.get('/api/AdminConfigs');
       if (res.data) {
         setSettings(prev => ({ ...prev, ...res.data }));
       }
@@ -30,7 +30,7 @@ const SystemConfig = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      await axios.post('http://localhost:5252/api/AdminConfigs/update', settings);
+      await axios.post('/api/AdminConfigs/update', settings);
       toast.success("Đã lưu thay đổi vào Database!");
     } catch (error) {
       toast.error("Lỗi khi lưu cấu hình!");

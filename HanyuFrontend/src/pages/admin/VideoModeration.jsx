@@ -10,7 +10,7 @@ const VideoModeration = () => {
 
   useEffect(() => {
     // Lưu ý: Kiểm tra port 5252 đã chạy chưa
-    axios.get('http://localhost:5252/api/AdminVideo/users-active')
+    axios.get('/api/AdminVideo/users-active')
       .then(res => setUsers(res.data))
       .catch(err => console.error("Lỗi API Users:", err));
   }, []);
@@ -27,7 +27,7 @@ const VideoModeration = () => {
     setActiveUser(user);
     setSelectedVideo(null);
     try {
-      const res = await axios.get(`http://localhost:5252/api/AdminVideo/user-videos/${user.userId || user.userID}`);
+      const res = await axios.get(`/api/AdminVideo/user-videos/${user.userId || user.userID}`);
       setVideos(res.data);
     } catch (err) {
       console.error("Lỗi API Videos:", err);
@@ -36,7 +36,7 @@ const VideoModeration = () => {
 
   const handleViewDetail = async (videoId) => {
     try {
-      const res = await axios.get(`http://localhost:5252/api/AdminVideo/video-detail/${videoId}`);
+      const res = await axios.get(`/api/AdminVideo/video-detail/${videoId}`);
       setSelectedVideo(res.data);
     } catch (err) {
       console.error("Lỗi API Detail:", err);

@@ -15,7 +15,7 @@ const RoadmapDetail = () => {
             try {
                 setLoading(true);
                 const token = localStorage.getItem('token'); 
-                const response = await axios.get(`http://localhost:5252/api/Roadmap/${id}`, {
+                const response = await axios.get(`/api/Roadmap/${id}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setRoadmapData(response.data);

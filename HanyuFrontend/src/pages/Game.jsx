@@ -18,7 +18,7 @@ import GameListening from '../components/GameListening';
 import GameMixed from '../components/GameMixed';
 import SRSGame from '../components/SRSGame';
 
-const API_BASE_URL = "http://localhost:5252/api";
+const API_BASE_URL = "/api";
 
 const Game = () => {
   const navigate = useNavigate();

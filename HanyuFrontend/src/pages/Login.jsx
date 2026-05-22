@@ -20,7 +20,7 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      const res = await axios.post("http://localhost:5252/api/auth/admin-login", formData);
+      const res = await axios.post("/api/auth/admin-login", formData);
 
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("userId", res.data.userId);

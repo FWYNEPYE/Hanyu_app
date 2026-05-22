@@ -24,7 +24,7 @@ const RoadmapManagement = () => {
   const fetchRoadmaps = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://localhost:5252/api/AdminRoadmap", { headers });
+      const res = await axios.get("/api/AdminRoadmap", { headers });
       setRoadmaps(res.data);
       
       // Nếu đang chọn một roadmap, cập nhật lại data mới nhất của nó (để thấy step mới)
@@ -50,7 +50,7 @@ const RoadmapManagement = () => {
 
     try {
       // Backend nhận Model Roadmap nên cần gửi đủ cấu trúc cơ bản
-      await axios.post("http://localhost:5252/api/AdminRoadmap", { 
+      await axios.post("/api/AdminRoadmap", { 
         title: title,
         steps: [] // Quan trọng: Tránh lỗi Validation nếu Backend yêu cầu collection
       }, { headers });
@@ -67,7 +67,7 @@ const RoadmapManagement = () => {
   const handleDeleteRoadmap = async (id) => {
     if(!window.confirm("Sếp có chắc muốn xóa lộ trình này không?")) return;
     try {
-      await axios.delete(`http://localhost:5252/api/AdminRoadmap/${id}`, { headers });
+      await axios.delete(`/api/AdminRoadmap/${id}`, { headers });
       setSelectedRoadmap(null);
       fetchRoadmaps();
     } catch (err) {
@@ -82,7 +82,7 @@ const RoadmapManagement = () => {
 
     try {
       // Gọi đúng endpoint /api/AdminRoadmap/steps (có chữ s)
-      await axios.post(`http://localhost:5252/api/AdminRoadmap/steps`, { 
+      await axios.post(`/api/AdminRoadmap/steps`, { 
         roadmapId: roadmapId,
         title: stepTitle,
         // Nếu Model RoadmapStep của sếp có thêm trường Order hay ID, hãy thêm ở đây
@@ -108,7 +108,7 @@ const handleAssignExam = async (stepId) => {
   if (!examId) return;
 
   try {
-    await axios.put(`http://localhost:5252/api/AdminRoadmap/steps/${stepId}/assign-exam`, 
+    await axios.put(`/api/AdminRoadmap/steps/${stepId}/assign-exam`, 
       parseInt(examId), // Gửi trực tiếp số ID
       { headers: { ...headers, "Content-Type": "application/json" } }
     );

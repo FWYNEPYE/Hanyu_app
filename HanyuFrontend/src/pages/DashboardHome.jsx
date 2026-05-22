@@ -39,8 +39,8 @@ useEffect(() => {
 
       // CHẠY SONG SONG CẢ 2 API ĐỂ TỐI ƯU TỐC ĐỘ (Dùng Promise.all)
       const [dashRes, srsRes] = await Promise.all([
-        axios.get('http://localhost:5252/api/Dashboard/stats', { headers }),
-        axios.get('http://localhost:5252/api/UserProgress/srs-list', { headers })
+        axios.get('/api/Dashboard/stats', { headers }),
+        axios.get('/api/UserProgress/srs-list', { headers })
       ]);
 
       // 1. Xử lý dữ liệu Dashboard
@@ -102,7 +102,7 @@ const handleAutoClaim = async () => {
     
     const totalPoints = 15; 
 
-    await axios.post("http://localhost:5252/api/User/add-points", 
+    await axios.post("/api/User/add-points", 
       { pointsToAdd: totalPoints },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -112,7 +112,7 @@ const handleAutoClaim = async () => {
     setTimeout(async () => {
       fetchUserData(); 
       
-      const response = await axios.get('http://localhost:5252/api/Dashboard/stats', {
+      const response = await axios.get('/api/Dashboard/stats', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setBackendData(response.data); 
@@ -140,7 +140,7 @@ useEffect(() => {
 useEffect(() => {
     const handleBeforeUnload = () => {
       const token = localStorage.getItem('token');
-      fetch('http://localhost:5252/api/Dashboard/update-progress', {
+      fetch('/api/Dashboard/update-progress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ seconds: secondsRef.current }), // Dùng Ref ở đây
@@ -174,7 +174,7 @@ useEffect(() => {
       triggerCoinFly();
 
       const token = localStorage.getItem("token");
-      await fetch("http://localhost:5252/api/User/add-points", {
+      await fetch("/api/User/add-points", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -198,7 +198,7 @@ useEffect(() => {
 const saveProgressToBackend = async (currentSeconds) => {
   try {
     const token = localStorage.getItem('token');
-    const res = await axios.post('http://localhost:5252/api/Dashboard/update-progress', 
+    const res = await axios.post('/api/Dashboard/update-progress', 
       { seconds: currentSeconds },
       { headers: { Authorization: `Bearer ${token}` } }
     );

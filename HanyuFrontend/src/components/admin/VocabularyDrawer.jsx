@@ -17,7 +17,7 @@ const VocabularyDrawer = ({ isOpen, onClose, categoryId, categoryName, level }) 
     if (!categoryId) return;
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:5252/api/Vocabulary/category/${categoryId}`);
+      const res = await axios.get(`/api/Vocabulary/category/${categoryId}`);
       setVocabList(res.data);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
@@ -33,7 +33,7 @@ const VocabularyDrawer = ({ isOpen, onClose, categoryId, categoryName, level }) 
   const handleAdd = async () => {
     if (!newWord.hanzi || !newWord.meaning) return alert("Thiếu Hán tự hoặc Nghĩa sếp ơi!");
     try {
-      await axios.post(`http://localhost:5252/api/Vocabulary`, { ...newWord, categoryId });
+      await axios.post(`/api/Vocabulary`, { ...newWord, categoryId });
       setNewWord({ 
         hanzi: '', pinyin: '', meaning: '', type: 'N', 
         example: '', exampleMeaning: '', level: level 
@@ -49,7 +49,7 @@ const VocabularyDrawer = ({ isOpen, onClose, categoryId, categoryName, level }) 
 
   const handleUpdate = async () => {
     try {
-      await axios.put(`http://localhost:5252/api/Vocabulary/${editingId}`, editForm);
+      await axios.put(`/api/Vocabulary/${editingId}`, editForm);
       setEditingId(null);
       fetchVocab();
     } catch (err) { alert("Lỗi cập nhật!"); }
@@ -57,7 +57,7 @@ const VocabularyDrawer = ({ isOpen, onClose, categoryId, categoryName, level }) 
 
   const handleDelete = async (id) => {
     if (!window.confirm("Xóa nhé sếp?")) return;
-    await axios.delete(`http://localhost:5252/api/Vocabulary/${id}`);
+    await axios.delete(`/api/Vocabulary/${id}`);
     fetchVocab();
   };
 

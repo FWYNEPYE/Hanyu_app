@@ -14,7 +14,7 @@ const CommunityChat = () => {
 
 const fetchMessages = async () => {
   try {
-    const res = await axios.get('http://localhost:5252/api/social/messages');
+    const res = await axios.get('/api/social/messages');
     setMessages(res.data);
   } catch (error) {
     console.error("Lỗi lấy tin nhắn", error);
@@ -58,7 +58,7 @@ useEffect(() => {
       const token = localStorage.getItem('token');
       try {
         setLoading(true);
-        await axios.post('http://localhost:5252/api/social/send-message', 
+        await axios.post('/api/social/send-message', 
           { content: inputText },
           { headers: { Authorization: `Bearer ${token}` } }
         );

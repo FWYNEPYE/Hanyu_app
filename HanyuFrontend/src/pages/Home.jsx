@@ -39,7 +39,7 @@ const Home = () => {
         );
 
         // Gửi sang Backend 
-        const res = await axios.post("http://localhost:5252/api/Auth/google-login", {
+        const res = await axios.post("/api/Auth/google-login", {
           email: userInfo.data.email,
           name: userInfo.data.name,
           googleId: userInfo.data.sub,

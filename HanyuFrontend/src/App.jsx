@@ -49,7 +49,7 @@ useEffect(() => {
   const checkConfig = async () => {
     try {
       console.log("Đang check cấu hình hệ thống...");
-      const res = await axios.get('http://localhost:5252/api/AdminConfigs');
+      const res = await axios.get('/api/AdminConfigs');
       
       // Kiểm tra kỹ giá trị trả về
       if (res.data && String(res.data.MaintenanceMode).toLowerCase() === 'true') {

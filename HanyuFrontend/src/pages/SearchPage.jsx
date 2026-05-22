@@ -60,7 +60,7 @@ useEffect(() => {
     }
     
     try {
-      const response = await axios.get(`http://localhost:5252/api/Dictionary/suggestions`, {
+      const response = await axios.get(`/api/Dictionary/suggestions`, {
         params: { keyword: searchTerm }
       });
       setSearchSuggestions(Array.isArray(response.data) ? response.data : []);
@@ -164,7 +164,7 @@ const handleOpenSaveModal = () => {
     setIsSaved(false);
 
    try {
-    const response = await axios.get(`http://localhost:5252/api/Dictionary/search`, {
+    const response = await axios.get(`/api/Dictionary/search`, {
       params: { keyword: query, userId: getUserId() }
     });
 

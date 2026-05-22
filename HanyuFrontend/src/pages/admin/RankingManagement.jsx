@@ -10,7 +10,7 @@ const RankingManagement = () => {
   const fetchRankings = async () => {
   try {
     setLoading(true);
-    const res = await axios.get(`http://localhost:5252/api/AdminRanking/list`);
+    const res = await axios.get(`/api/AdminRanking/list`);
     setRankings(res.data);
   } catch (error) {
     console.error("Lỗi bốc dữ liệu:", error);
@@ -30,7 +30,7 @@ const RankingManagement = () => {
 const handleRemoveRank = async (userId) => {
   if(window.confirm("Chắc chắn muốn hủy hạng người này chứ? ")) {
     try {
-      await axios.delete(`http://localhost:5252/api/AdminRanking/reset/${userId}`);
+      await axios.delete(`/api/AdminRanking/reset/${userId}`);
       alert("Đã 'trảm' xong!");
       fetchRankings(); 
     } catch (error) {

@@ -21,7 +21,7 @@ const StepDetail = () => {
             try {
                 setLoading(true);
                 const token = localStorage.getItem('token');
-                const response = await axios.get(`http://localhost:5252/api/Roadmap/step-vocab/${stepId}`, {
+                const response = await axios.get(`/api/Roadmap/step-vocab/${stepId}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 
@@ -42,7 +42,7 @@ const StepDetail = () => {
             const token = localStorage.getItem('token');
             const userId = localStorage.getItem('userId');
 
-            await axios.post(`http://localhost:5252/api/UserProgress/toggle-srs`, 
+            await axios.post(`/api/UserProgress/toggle-srs`, 
                 { vocaId, userId }, 
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -73,7 +73,7 @@ const StepDetail = () => {
             const userId = localStorage.getItem('userId');
             const allVocaIds = vocabList.map(v => v.vocaId);
             
-            await axios.post(`http://localhost:5252/api/UserProgress/finish-step`, 
+            await axios.post(`/api/UserProgress/finish-step`, 
                 { stepId, userId, vocaIds: allVocaIds },
                 { headers: { Authorization: `Bearer ${token}` } }
             );

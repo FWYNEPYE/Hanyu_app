@@ -12,8 +12,8 @@ const UserManagement = () => {
     try {
       const token = localStorage.getItem('token');
       const url = searchTerm 
-        ? `http://localhost:5252/api/admin/users/search?query=${searchTerm}`
-        : `http://localhost:5252/api/admin/users`;
+        ? `/api/admin/users/search?query=${searchTerm}`
+        : `/api/admin/users`;
         
       const res = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` }
@@ -32,7 +32,7 @@ const UserManagement = () => {
 
     try {
         const token = localStorage.getItem('token');
-        await axios.put(`http://localhost:5252/api/admin/users/${id}/add-point`, amount, {
+        await axios.put(`/api/admin/users/${id}/add-point`, amount, {
             headers: { 
                 Authorization: `Bearer ${token}`,
                 'Content-Type': 'application/json' 
@@ -57,7 +57,7 @@ const UserManagement = () => {
   const handleToggleStatus = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5252/api/admin/users/toggle-status/${id}`, {}, {
+      await axios.put(`/api/admin/users/toggle-status/${id}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -73,7 +73,7 @@ const UserManagement = () => {
     if (!window.confirm("Sếp có chắc muốn đuổi học viên này khỏi hệ thống không?")) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5252/api/admin/users/${id}`, {
+      await axios.delete(`/api/admin/users/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(users.filter(u => u.userID !== id));

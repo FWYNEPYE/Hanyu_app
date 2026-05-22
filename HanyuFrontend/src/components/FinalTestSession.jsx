@@ -24,7 +24,7 @@ const FinalTestSession = () => {
             try {
                 setLoading(true);
                 const token = localStorage.getItem('token'); 
-                const res = await axios.get(`http://localhost:5252/api/AdminExam/get-by-step/${stepId}`, {
+                const res = await axios.get(`/api/AdminExam/get-by-step/${stepId}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
 
@@ -65,7 +65,7 @@ const FinalTestSession = () => {
                 userAnswer: answers[key]
             }));
 
-            const res = await axios.post(`http://localhost:5252/api/Test/submit`, {
+            const res = await axios.post(`/api/Test/submit`, {
                 stepId: parseInt(stepId),
                 answers: formattedAnswers,
                 timeUsed: (questions.length > 0 ? 2400 : 0) - timeLeft

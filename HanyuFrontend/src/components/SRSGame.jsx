@@ -25,7 +25,7 @@ export default function SRSGame({ onBack }) {
   const fetchData = async () => {
   try {
     const token = localStorage.getItem("token");
-    const response = await axios.get(`http://localhost:5252/api/UserProgress/srs-list`, {
+    const response = await axios.get(`/api/UserProgress/srs-list`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     console.log("Dữ liệu SRS từ Backend:", response.data); 

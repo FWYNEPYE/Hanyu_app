@@ -16,7 +16,7 @@ const CommunityManagement = () => {
     try {
       setLoading(true);
       // API lấy toàn bộ deck (kể cả deck đã bị khóa)
-      const res = await axios.get(`http://localhost:5252/api/AdminCommunity/all-decks`);
+      const res = await axios.get(`/api/AdminCommunity/all-decks`);
       setSets(res.data);
     } catch (error) {
       console.error("Lỗi fetch:", error);
@@ -32,7 +32,7 @@ const CommunityManagement = () => {
   const handleApprove = async (id) => {
     if (window.confirm("Duyệt bộ từ này lên công khai?")) {
       try {
-        await axios.put(`http://localhost:5252/api/AdminCommunity/approve/${id}`);
+        await axios.put(`/api/AdminCommunity/approve/${id}`);
         fetchRankings();
       } catch (error) {
         alert("Lỗi khi duyệt!");
@@ -44,7 +44,7 @@ const CommunityManagement = () => {
   const handleReject = async (id) => {
     if (window.confirm("Sếp muốn khóa bộ từ này lại, không cho phép công khai đúng không?")) {
       try {
-        await axios.put(`http://localhost:5252/api/AdminCommunity/reject/${id}`);
+        await axios.put(`/api/AdminCommunity/reject/${id}`);
         alert("Đã khóa bộ từ thành công!");
         fetchRankings();
       } catch (error) {

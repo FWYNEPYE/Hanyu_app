@@ -14,7 +14,7 @@ import AddWordModal from '../components/AddWordModal';
 import CreateSetModal from '../components/CreateSetModal';
 import PublishSetModal from '../components/PublishSetModal';
 
-const API_BASE_URL = "http://localhost:5252/api"; 
+const API_BASE_URL = "/api"; 
 
 const Vocabulary = () => {
   const location = useLocation();

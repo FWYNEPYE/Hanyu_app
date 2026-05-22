@@ -31,7 +31,7 @@ const fetchAllData = async () => {
   
   if (!userId || !token) return;
 
-  const baseUrl = 'http://localhost:5252/api/social';
+  const baseUrl = '/api/social';
   const config = {
     headers: { Authorization: `Bearer ${token}` }
   };

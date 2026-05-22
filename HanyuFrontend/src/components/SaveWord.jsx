@@ -12,7 +12,7 @@ const SaveWordModal = ({ isOpen, onClose, wordData, userId, onSaved }) => {
     // Lấy danh sách bộ từ của user
     const fetchCategories = async () => {
         try {
-            const res = await axios.get(`http://localhost:5252/api/Category/user/${userId}`);
+            const res = await axios.get(`/api/Category/user/${userId}`);
             setCategories(res.data);
         } catch (err) { console.error(err); }
     };
@@ -25,7 +25,7 @@ const SaveWordModal = ({ isOpen, onClose, wordData, userId, onSaved }) => {
         setLoading(true);
         try {
             // 1. Tạo Category mới
-            const catRes = await axios.post(`http://localhost:5252/api/Category`, {
+            const catRes = await axios.post(`/api/Category`, {
                 categoryName: newCategoryName,
                 categoryType: "user",
                 userID: userId
@@ -53,7 +53,7 @@ const SaveWordModal = ({ isOpen, onClose, wordData, userId, onSaved }) => {
         };
 
         await axios.post(
-            `http://localhost:5252/api/Dictionary/add-to-collection?userId=${userId}&categoryId=${catId}`, 
+            `/api/Dictionary/add-to-collection?userId=${userId}&categoryId=${catId}`, 
             payload // Gửi payload đã chuẩn hóa
         );
         

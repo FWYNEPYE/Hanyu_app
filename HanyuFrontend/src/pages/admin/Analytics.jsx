@@ -21,9 +21,9 @@ const Analytics = () => {
       try {
         setLoading(true);
         const [resOverview, resGrowth, resRanks] = await Promise.all([
-          axios.get('http://localhost:5252/api/AdminAnalytics/overview'),
-          axios.get('http://localhost:5252/api/AdminAnalytics/user-growth'),
-          axios.get('http://localhost:5252/api/AdminAnalytics/rank-distribution')
+          axios.get('/api/AdminAnalytics/overview'),
+          axios.get('/api/AdminAnalytics/user-growth'),
+          axios.get('/api/AdminAnalytics/rank-distribution')
         ]);
 
         setOverview(resOverview.data);
@@ -42,7 +42,7 @@ const Analytics = () => {
   const handleExportExcel = () => {
     const confirmExport = window.confirm("Xuất danh sách học viên ra file Excel?");
     if (confirmExport) {
-      window.location.href = 'http://localhost:5252/api/AdminAnalytics/export-report';
+      window.location.href = '/api/AdminAnalytics/export-report';
     }
   };
 

@@ -15,7 +15,7 @@ const ChatManagement = () => {
   const fetchMonitor = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:5252/api/AdminCommunityChat/monitor');
+      const res = await axios.get('/api/AdminCommunityChat/monitor');
       setMessages(res.data);
     } catch (err) {
       console.error("Không lấy được dữ liệu chat!", err);
@@ -34,7 +34,7 @@ const ChatManagement = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Xóa tin nhắn này?")) {
       try {
-        await axios.delete(`http://localhost:5252/api/AdminCommunityChat/delete-message/${id}`);
+        await axios.delete(`/api/AdminCommunityChat/delete-message/${id}`);
         fetchMonitor();
       } catch (err) { alert("Xóa thất bại!"); }
     }
@@ -44,7 +44,7 @@ const ChatManagement = () => {
   const handleMute = async (userId, username) => {
     if (window.confirm(`Khóa mõm ${username} nhé?`)) {
       try {
-        await axios.put(`http://localhost:5252/api/AdminCommunityChat/mute-user/${userId}`);
+        await axios.put(`/api/AdminCommunityChat/mute-user/${userId}`);
         fetchMonitor();
       } catch (err) { alert("Lỗi khi khóa người dùng!"); }
     }
@@ -55,7 +55,7 @@ const ChatManagement = () => {
     if (window.confirm(`Mở khóa cho ${username} nhé?`)) {
       try {
         const token = localStorage.getItem('token');
-        await axios.put(`http://localhost:5252/api/AdminCommunityChat/unmute-user/${userId}`, {}, {
+        await axios.put(`/api/AdminCommunityChat/unmute-user/${userId}`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
         alert("Đã hoàn trả tự động cho ẻm!");
@@ -70,7 +70,7 @@ const ChatManagement = () => {
     if (!adminInput.trim()) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5252/api/social/send-message', 
+      await axios.post('/api/social/send-message', 
         { content:   adminInput },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -85,7 +85,7 @@ const ChatManagement = () => {
     if (window.confirm("Xóa toàn bộ lịch sử chat?")) {
         try {
             const token = localStorage.getItem('token');
-            await axios.delete('http://localhost:5252/api/AdminCommunityChat/clear-all-history', {
+            await axios.delete('/api/AdminCommunityChat/clear-all-history', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             

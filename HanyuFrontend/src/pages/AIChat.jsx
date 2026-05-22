@@ -27,7 +27,7 @@ const AIChat = ({ currentPage }) => {
   const loadSessions = async () => {
     const currentUserId = localStorage.getItem("userId") || 7;
     try {
-        const response = await fetch(`http://localhost:5252/api/AI/sessions/${currentUserId}`); 
+        const response = await fetch(`/api/AI/sessions/${currentUserId}`); 
         if (response.ok) {
             const data = await response.json();
             setSessions(data); 
@@ -89,7 +89,7 @@ const AIChat = ({ currentPage }) => {
     setCurrentSessionId(sessionId);
     try {
         setIsLoading(true);
-        const response = await fetch(`http://localhost:5252/api/AI/history/session/${sessionId}`);
+        const response = await fetch(`/api/AI/history/session/${sessionId}`);
         if (response.ok) {
             const data = await response.json();
             setMessages(data.map(m => ({
@@ -110,7 +110,7 @@ const AIChat = ({ currentPage }) => {
     if (!currentPage || view !== 'chat') return;
     const getHint = async () => {
       try {
-        const res = await fetch('http://localhost:5252/api/AI/context-hint', {
+        const res = await fetch('/api/AI/context-hint', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ currentPage })
@@ -143,7 +143,7 @@ const AIChat = ({ currentPage }) => {
     setIsLoading(true);
 
     try {
-        const response = await fetch('http://localhost:5252/api/AI/chat', {
+        const response = await fetch('/api/AI/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: parseInt(currentUserId), message: messageToSend, SessionID: currentSessionId })

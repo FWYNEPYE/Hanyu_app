@@ -22,7 +22,7 @@ useEffect(() => {
     const fetchExam = async () => {
         try {
             // Gọi API để lấy đề cũ đã lưu
-            const res = await axios.get(`http://localhost:5252/api/AdminExam/get-by-step/${stepId}`, { headers });
+            const res = await axios.get(`/api/AdminExam/get-by-step/${stepId}`, { headers });
             
             if (res.data && res.data.questions.length > 0) {
                 setQuestions(res.data.questions);
@@ -46,7 +46,7 @@ useEffect(() => {
         if (!window.confirm("Hệ thống sẽ bốc 40 từ vựng ngẫu nhiên từ bộ từ vựng của Step này để tạo đề. Sếp đồng ý không?")) return;
         setLoading(true);
         try {
-            const res = await axios.post(`http://localhost:5252/api/AdminExam/generate/${stepId}`, {}, { headers });
+            const res = await axios.post(`/api/AdminExam/generate/${stepId}`, {}, { headers });
             setQuestions(res.data.questions);
             alert("Đã bốc đề xong! Mời sếp thẩm định.");
         } catch (err) {
@@ -57,7 +57,7 @@ useEffect(() => {
     //  Lưu toàn bộ thay đổi
     const handleSaveAll = async () => {
         try {
-            await axios.post(`http://localhost:5252/api/AdminExam/save-exam`, {
+            await axios.post(`/api/AdminExam/save-exam`, {
                 stepId,
                 questions,
                 ...config

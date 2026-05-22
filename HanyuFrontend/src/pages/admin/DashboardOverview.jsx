@@ -25,10 +25,10 @@ useEffect(() => {
       const headers = { Authorization: `Bearer ${token}` };
 
       const [statsRes, healthRes, activityRes, dangerRes] = await Promise.all([
-        axios.get('http://localhost:5252/api/Admin/stats', { headers }),
-        axios.get('http://localhost:5252/api/Admin/server-health', { headers }),
-        axios.get('http://localhost:5252/api/Admin/recent-activities', { headers }),
-        axios.get('http://localhost:5252/api/AdminCommunityChat/danger-count', { headers })
+        axios.get('/api/Admin/stats', { headers }),
+        axios.get('/api/Admin/server-health', { headers }),
+        axios.get('/api/Admin/recent-activities', { headers }),
+        axios.get('/api/AdminCommunityChat/danger-count', { headers })
       ]);
 
       setStats({
