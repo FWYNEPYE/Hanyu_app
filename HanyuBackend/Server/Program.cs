@@ -189,4 +189,13 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+
+// Thêm vào Program.cs trước dòng app.Run();
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    // Lệnh này đảm bảo tạo cơ sở dữ liệu và các bảng nếu chưa tồn tại
+    dbContext.Database.EnsureCreated(); 
+}
+
 app.Run();
