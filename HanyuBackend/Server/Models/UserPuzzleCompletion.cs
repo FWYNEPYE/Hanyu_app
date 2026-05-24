@@ -12,7 +12,7 @@ namespace Server.Models
 
         public int PuzzleID { get; set; }
 
-        public DateTime CompletedAt { get; set; } = DateTime.Now;
+        public DateTime CompletedAt { get; set; } = DateTime.UtcNow;
 
         [ForeignKey("UserID")]
         public virtual User User { get; set; }

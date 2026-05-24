@@ -24,7 +24,7 @@ public class MinigameController : ControllerBase
         if (game == null) return NotFound();
 
         game.Status = newStatus;
-        game.LastUpdated = DateTime.Now;
+        game.LastUpdated = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
         return Ok(new { message = "Cập nhật trạng thái thành công !" });
@@ -36,7 +36,7 @@ public class MinigameController : ControllerBase
     {
         if (log == null) return BadRequest();
 
-        log.PlayedAt = DateTime.Now;
+        log.PlayedAt = DateTime.UtcNow;
         _context.GameLogs.Add(log);
         await _context.SaveChangesAsync();
 
@@ -75,7 +75,7 @@ public class MinigameController : ControllerBase
         game.BasePoint = updatedGame.BasePoint;
         game.TimeLimit = updatedGame.TimeLimit;
         game.MinQuestions = updatedGame.MinQuestions;
-        game.LastUpdated = DateTime.Now;
+        game.LastUpdated = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
         return Ok(new { message = "Cấu hình đã được cập nhật thành công!" });
@@ -88,7 +88,7 @@ public class MinigameController : ControllerBase
         if (await _context.Minigames.AnyAsync(g => g.GameId == newGame.GameId))
             return BadRequest("Mã Game ID này đã tồn tại rồi!");
 
-        newGame.LastUpdated = DateTime.Now;
+        newGame.LastUpdated = DateTime.UtcNow;
         _context.Minigames.Add(newGame);
         await _context.SaveChangesAsync();
         

@@ -19,8 +19,8 @@ namespace Server.Models
 
         // Logic SRS cơ bản
         public int CurrentLevel { get; set; } = 1; // Cấp độ từ 1-5
-        public DateTime NextReview { get; set; } = DateTime.Now.AddDays(1); // Mặc định mai ôn lại
+        public DateTime NextReview { get; set; } = DateTime.UtcNow.AddDays(1); // Mặc định mai ôn lại
         public bool IsSaved { get; set; } = true;
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

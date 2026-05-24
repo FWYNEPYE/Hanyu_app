@@ -132,7 +132,7 @@ namespace Server.Controllers
                     ExampleMeaning = aiDto.examples != null && aiDto.examples.Count > 0 ? aiDto.examples[0].vi : "",
                     //CategoryID = category.CategoryID,
                     
-                    CreatedDate = DateTime.Now,
+                    CreatedDate = DateTime.UtcNow,
                     Level = 0
                 };
 
@@ -158,7 +158,7 @@ public async Task<IActionResult> AddToCollection([FromBody] Vocabulary vocab, [F
 
         // 2. Gán ID bộ từ do người dùng chọn
         vocab.CategoryID = categoryId;
-        vocab.CreatedDate = DateTime.Now;
+        vocab.CreatedDate = DateTime.UtcNow;
         vocab.Level = 0;
 
         // Xóa ID cũ nếu có để EF tự sinh ID mới cho bản ghi Vocabulary

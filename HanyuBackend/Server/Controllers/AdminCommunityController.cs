@@ -57,7 +57,7 @@ namespace Server.Controllers
             deck.IsPending = false;    
             deck.IsLocked = false;     
             deck.Version += 1; // Tăng version để app của user nhận biết có cập nhật
-            deck.UpdatedAt = DateTime.Now;
+            deck.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
             return Ok(new { success = true, message = "Đã duyệt bộ từ này lên sàn công khai!" });
@@ -72,7 +72,7 @@ namespace Server.Controllers
             deck.IsPublic = false;     
             deck.IsPending = false;    
             deck.IsLocked = true;      
-            deck.UpdatedAt = DateTime.Now;
+            deck.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
             return Ok(new { success = true, message = "Đã khóa bộ từ thành công!" });

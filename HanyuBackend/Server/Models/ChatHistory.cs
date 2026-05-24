@@ -20,6 +20,6 @@ namespace Server.Models
         public string Content { get; set; } = string.Empty;
         public string? Pinyin { get; set; }
         public string? Translation { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

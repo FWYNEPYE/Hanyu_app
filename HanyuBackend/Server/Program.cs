@@ -170,6 +170,10 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddRouting(options => options.LowercaseUrls = true);
 
+// Đặt dòng này để cho phép dùng DateTime.UtcNow (Local) với Postgres
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
+
 var app = builder.Build();
 
 // --- 6. MIDDLEWARE (THỨ TỰ QUAN TRỌNG) ---

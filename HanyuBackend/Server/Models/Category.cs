@@ -20,7 +20,7 @@ namespace Server.Models
         public int Price { get; set; } = 0; // Giá (point) 
 
         public int Version { get; set; } = 1;
-        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         public string? ParentCategoryID { get; set; } 
 
         public string? Description { get; set; }

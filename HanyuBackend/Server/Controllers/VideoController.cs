@@ -64,7 +64,7 @@ public async Task<IActionResult> GetVideos([FromQuery] int userId)
                 VideoType = dto.VideoType,
                 UrlOrPath = finalPath,
                 UserID = dto.UserID, // Đảm bảo gán UserID để hiển thị bên Admin
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.Videos.Add(newVideo);

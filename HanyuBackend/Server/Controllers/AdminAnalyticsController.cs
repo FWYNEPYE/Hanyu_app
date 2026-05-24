@@ -30,7 +30,7 @@ namespace Server.Controllers
                     .CountAsync(up => up.IsCompleted);
 
                 var totalAiChat = await _context.ChatHistories.CountAsync();
-                var sevenDaysAgo = DateTime.Now.AddDays(-7);
+                var sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
                 var activeUsersCount = await _context.DailyProgresses
                     .Where(dp => dp.StudyDate >= sevenDaysAgo)
                     .Select(dp => dp.UserID)
@@ -58,7 +58,7 @@ namespace Server.Controllers
         [HttpGet("user-growth")]
         public async Task<IActionResult> GetUserGrowth()
         {
-            var startDate = DateTime.Now.AddMonths(-11);
+            var startDate = DateTime.UtcNow.AddMonths(-11);
             startDate = new DateTime(startDate.Year, startDate.Month, 1);
 
             var growthData = await _context.Users
@@ -155,7 +155,7 @@ public async Task<IActionResult> ExportExcel()
 
         //  Trả file về cho Browser
         var fileContents = package.GetAsByteArray();
-        string fileName = $"BaoCao_Hanyu_{DateTime.Now:yyyyMMdd}.xlsx";
+        string fileName = $"BaoCao_Hanyu_{DateTime.UtcNow:yyyyMMdd}.xlsx";
         return File(fileContents, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
     }
 }

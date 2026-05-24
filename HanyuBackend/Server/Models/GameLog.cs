@@ -28,7 +28,7 @@ namespace Server.Models
 
         public int CompletionTime { get; set; } // Tính bằng giây
 
-        public DateTime PlayedAt { get; set; } = DateTime.Now;
+        public DateTime PlayedAt { get; set; } = DateTime.UtcNow;
 
         // --- Navigation Properties (Mối quan hệ) ---
 

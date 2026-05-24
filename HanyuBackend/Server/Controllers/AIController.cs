@@ -35,7 +35,7 @@ namespace Server.Controllers
                     SessionID = sid, 
                     Content = request.Message,
                     Role = "user",
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.UtcNow
                 };
                 _context.ChatHistories.Add(userMsg);
 
@@ -48,7 +48,7 @@ namespace Server.Controllers
                     Pinyin = aiResult.Pinyin,
                     Translation = aiResult.Translation,
                     Role = "ai",
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.UtcNow
                 };
                 _context.ChatHistories.Add(aiMsg);
                 

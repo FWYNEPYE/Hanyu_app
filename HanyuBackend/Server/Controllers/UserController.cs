@@ -141,7 +141,7 @@ namespace Server.Controllers
                     Type = "Chuỗi", // Gắn nhãn là Streak cho rực cháy
                     Title = "Duy trì phong độ! 🔥",
                     Content = $"Diu vừa nhận được {data.PointsToAdd} ☀️ vì đã chăm chỉ học tập. Tiếp tục phát huy nhé!",
-                    CreatedAt = DateTime.Now,
+                    CreatedAt = DateTime.UtcNow,
                     IsRead = false
                 };
                 

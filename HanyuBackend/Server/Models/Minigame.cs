@@ -26,6 +26,6 @@ namespace Server.Models
         public int TimeLimit { get; set; } = 60; 
         public int MinQuestions { get; set; } = 5; 
 
-        public DateTime LastUpdated { get; set; } = DateTime.Now;
+        public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
     }
 }

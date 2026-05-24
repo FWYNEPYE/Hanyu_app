@@ -198,7 +198,7 @@ namespace Server.Controllers
             {
                 UserID = userId,
                 Content = req.Content,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.Messages.Add(newMessage);

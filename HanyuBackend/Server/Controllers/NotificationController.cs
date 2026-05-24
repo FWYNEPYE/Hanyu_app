@@ -84,7 +84,7 @@ namespace Server.Controllers
                 Type = "STREAK",
                 Title = "Sắp mất chuỗi rồi! 🔥",
                 Content = "Hôm nay chưa học đủ 10 phút. Vào học ngay để không bị mất chuỗi nhé!",
-                CreatedAt = DateTime.Now,
+                CreatedAt = DateTime.UtcNow,
                 IsRead = false
             };
 
@@ -104,7 +104,7 @@ namespace Server.Controllers
                 Type = "RANK",
                 Title = "Mất Top 1 rồi! 👑",
                 Content = "Có người vừa vượt mặt bạn trên bảng xếp hạng. Giành lại vị trí ngay thôi!",
-                CreatedAt = DateTime.Now,
+                CreatedAt = DateTime.UtcNow,
                 IsRead = false
             };
 

@@ -12,3 +12,6 @@ COPY --from=build /app/publish .
 
 # 3. Lệnh chạy (Đảm bảo tên .dll khớp với tên file của bạn)
 ENTRYPOINT ["dotnet", "Server.dll"]
+
+# Thêm dòng này vào Dockerfile để cài thiếu thư viện
+RUN apt-get update && apt-get install -y libgssapi-krb5-2 && rm -rf /var/lib/apt/lists/*

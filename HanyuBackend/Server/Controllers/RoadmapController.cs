@@ -131,7 +131,7 @@ public async Task<IActionResult> GetVocabByStep(int stepId)
                     UserID = userId,
                     RoadmapStepId = stepId,
                     IsCompleted = true,
-                    CompletedAt = DateTime.Now
+                    CompletedAt = DateTime.UtcNow
                 };
 
                 _context.UserProgresses.Add(progress);

@@ -21,6 +21,6 @@ namespace Server.Models
         public virtual User User { get; set; } 
 
         public bool IsCompleted { get; set; } = true;
-        public DateTime CompletedAt { get; set; } = DateTime.Now;
+        public DateTime CompletedAt { get; set; } = DateTime.UtcNow;
     }
 }

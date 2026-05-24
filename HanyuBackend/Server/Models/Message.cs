@@ -9,7 +9,7 @@ namespace Server.Models
         public int MessId { get; set; }
         public int UserID{ get; set; } // Người gửi
         public string Content { get; set; } = string.Empty;
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         [ForeignKey("UserID")]
         public virtual User User { get; set; }

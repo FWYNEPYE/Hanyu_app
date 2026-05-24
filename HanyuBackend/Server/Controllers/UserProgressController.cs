@@ -40,9 +40,9 @@ namespace Server.Controllers
                     UserID = userId,
                     VocaId = request.VocaId,
                     CurrentLevel = 1,
-                    NextReview = DateTime.Now.AddDays(1),
+                    NextReview = DateTime.UtcNow.AddDays(1),
                     IsSaved = true,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.UtcNow
                 };
 
                 _context.UserVocaProgresses.Add(newProgress);
@@ -68,7 +68,7 @@ namespace Server.Controllers
                     UserID = userId,
                     RoadmapStepId = request.StepId,
                     IsCompleted = true,
-                    CompletedAt = DateTime.Now
+                    CompletedAt = DateTime.UtcNow
                 };
                 _context.UserProgresses.Add(stepProgress);
             }
@@ -87,9 +87,9 @@ namespace Server.Controllers
                             UserID = userId,
                             VocaId = vId,
                             CurrentLevel = 1,
-                            NextReview = DateTime.Now.AddDays(1),
+                            NextReview = DateTime.UtcNow.AddDays(1),
                             IsSaved = true,
-                            CreatedAt = DateTime.Now
+                            CreatedAt = DateTime.UtcNow
                         });
                     }
                 }
@@ -116,14 +116,14 @@ namespace Server.Controllers
                 case "easy":
                     progress.CurrentLevel += 1;
                     // Công thức giãn cách ngày học 
-                    progress.NextReview = DateTime.Now.AddDays(Math.Pow(2, progress.CurrentLevel)); 
+                    progress.NextReview = DateTime.UtcNow.AddDays(Math.Pow(2, progress.CurrentLevel)); 
                     break;
                 case "normal":
-                    progress.NextReview = DateTime.Now.AddDays(progress.CurrentLevel + 1);
+                    progress.NextReview = DateTime.UtcNow.AddDays(progress.CurrentLevel + 1);
                     break;
                 case "hard":
                     progress.CurrentLevel = 1; // Reset về cấp độ 1 nếu quên
-                    progress.NextReview = DateTime.Now.AddDays(1);
+                    progress.NextReview = DateTime.UtcNow.AddDays(1);
                     break;
             }
 
@@ -177,7 +177,7 @@ namespace Server.Controllers
             var stats = new {
                 learning = allVocaInRoadmap.Count(v => v.CurrentLevel < 5),
                 mastered = allVocaInRoadmap.Count(v => v.CurrentLevel >= 5),
-                due = allVocaInRoadmap.Count(v => v.NextReview <= DateTime.Now)
+                due = allVocaInRoadmap.Count(v => v.NextReview <= DateTime.UtcNow)
             };
 
             return Ok(stats);

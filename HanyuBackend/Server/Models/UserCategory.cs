@@ -11,7 +11,7 @@ namespace Server.Models
         public string CategoryID { get; set; }
         public int SavedVersion { get; set; }//version lúc lưu 
 
-        public DateTime PurchasedAt { get; set; } = DateTime.Now;
+        public DateTime PurchasedAt { get; set; } = DateTime.UtcNow;
 
 
         [ForeignKey("UserID")]

@@ -18,7 +18,7 @@ namespace Server.Models
         [StringLength(100)]
         public string Email { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
 
         // --- CÁC TRƯỜNG  STREAK ---

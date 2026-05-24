@@ -19,7 +19,7 @@ namespace Server.Models
         [NotMapped]
         public IFormFile? File { get; set; } 
 
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public int? UserID { get; set; } 
 
         [ForeignKey("UserID")]

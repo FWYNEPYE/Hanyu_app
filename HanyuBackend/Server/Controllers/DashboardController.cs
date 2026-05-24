@@ -228,7 +228,7 @@ namespace Server.Controllers
 
                 // Đánh dấu hoàn thành
                 task.IsCompleted = true;
-                task.CompletedAt = DateTime.Now;
+                task.CompletedAt = DateTime.UtcNow;
 
                 // Cộng điểm thưởng của task 
                 user.Points += task.Points;
@@ -240,7 +240,7 @@ namespace Server.Controllers
                     Type = task.Type,
                     Title = "Nhiệm vụ hoàn tất! ✨",
                     Content = $"Chúc mừng bạn đã xong nhiệm vụ '{task.TaskName}'. +{task.Points} point đã nạp vào ví!",
-                    CreatedAt = DateTime.Now,
+                    CreatedAt = DateTime.UtcNow,
                     IsRead = false
                 };
                 _context.Notifications.Add(notification);

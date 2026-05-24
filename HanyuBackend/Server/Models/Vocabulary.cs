@@ -26,8 +26,8 @@ namespace Server.Models
 
         [ForeignKey("CategoryID")]
         public virtual Category? Category { get; set; }
-        public DateTime CreatedDate { get; set; } = DateTime.Now;
-        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         
     }
 }

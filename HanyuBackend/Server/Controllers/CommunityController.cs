@@ -97,7 +97,7 @@ public async Task<IActionResult> RedeemDeck([FromBody] RedeemReq req)
     _context.UserCategories.Add(new UserCategory {
         UserID = req.UserId,
         CategoryID = req.DeckId,
-        PurchasedAt = DateTime.Now,
+        PurchasedAt = DateTime.UtcNow,
         SavedVersion = communityDeck.Version // Lưu lại để sau này biết có update hay không
     });
 

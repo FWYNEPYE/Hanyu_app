@@ -549,7 +549,7 @@ def format_master_md(design_system: dict) -> str:
     effects = design_system.get("key_effects", "")
     anti_patterns = design_system.get("anti_patterns", "")
     
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = DateTime.UtcNow().strftime("%Y-%m-%d %H:%M:%S")
     
     lines = []
     
@@ -805,7 +805,7 @@ def format_master_md(design_system: dict) -> str:
 def format_page_override_md(design_system: dict, page_name: str, page_query: str = None) -> str:
     """Format a page-specific override file with intelligent AI-generated content."""
     project = design_system.get("project_name", "PROJECT")
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = DateTime.UtcNow().strftime("%Y-%m-%d %H:%M:%S")
     page_title = page_name.replace("-", " ").replace("_", " ").title()
     
     # Detect page type and generate intelligent overrides

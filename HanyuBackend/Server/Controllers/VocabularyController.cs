@@ -51,7 +51,7 @@ namespace Server.Controllers
             var category = await _context.Categories.FindAsync(voca.CategoryID);
             if (category != null) {
                 category.Version += 1; // Mỗi lần thay đổi từ là tăng 1 đơn vị
-                category.UpdatedAt = DateTime.Now;
+                category.UpdatedAt = DateTime.UtcNow;
             }
             
             await _context.SaveChangesAsync();

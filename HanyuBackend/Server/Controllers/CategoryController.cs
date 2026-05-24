@@ -283,7 +283,7 @@ namespace Server.Controllers
                 UserID = req.UserID,
                 CategoryID = req.CategoryID,
                 SavedVersion = originalCate.Version, 
-                PurchasedAt = DateTime.Now
+                PurchasedAt = DateTime.UtcNow
             };
 
             _context.UserCategories.Add(userLink);
