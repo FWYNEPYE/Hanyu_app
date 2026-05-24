@@ -37,7 +37,7 @@ public class AuthController : ControllerBase
                 Points = 200,
                 AvailableAIUsage = 10,
                 AvatarUrl = data.PhotoUrl,
-                CreatedAt = DateTime.Now,
+                CreatedAt = DateTime.UtcNow,
                 IsActive = true 
             };
             _context.Users.Add(user);
