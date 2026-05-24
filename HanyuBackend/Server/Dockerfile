@@ -11,4 +11,4 @@ WORKDIR /app
 COPY --from=build /app/publish .
 
 # 3. Lệnh chạy (Đảm bảo tên .dll khớp với tên file của bạn)
-ENTRYPOINT ["dotnet", "HanyuBackend.dll"]
+ENTRYPOINT ["dotnet", "Server.dll"]
